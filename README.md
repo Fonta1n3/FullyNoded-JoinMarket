@@ -1,2 +1,4 @@
-# FullyNoded-JoinMarket
- Join Market for iOS
+
+# Fully Noded - Join Market
+
+🛠 WIP
