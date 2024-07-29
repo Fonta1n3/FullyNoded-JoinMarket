@@ -890,38 +890,38 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     private func lock(_ utxo: Utxo) {
         spinner.addConnectingView(vc: self, description: "locking...")
         
-        let param = Lock_Unspent(["unlock": false, "transactions": [["txid": utxo.txid,"vout": utxo.vout]]])
-        
-        Reducer.sharedInstance.makeCommand(command: .lockunspent(param)) { (response, errorMessage) in
-            guard let success = response as? Bool else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.loadUnlockedUtxos()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
-                }
-                
-                return
-            }
-            
-            if success {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.loadUnlockedUtxos()
-                }
-                
-                showAlert(vc: self, title: "UTXO Locked 🔐", message: "You can tap the locked button to see your locked utxo's and unlock them. Be aware if your node reboots all utxo's will be unlocked by default!")
-                
-            } else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.loadUnlockedUtxos()
-                    displayAlert(viewController: self, isError: true, message: "utxo was not locked")
-                }
-            }
-        }
+//        let param = Lock_Unspent(["unlock": false, "transactions": [["txid": utxo.txid,"vout": utxo.vout]]])
+//        
+//        Reducer.sharedInstance.makeCommand(command: .lockunspent(param)) { (response, errorMessage) in
+//            guard let success = response as? Bool else {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.loadUnlockedUtxos()
+//                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+//                }
+//                
+//                return
+//            }
+//            
+//            if success {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.loadUnlockedUtxos()
+//                }
+//                
+//                showAlert(vc: self, title: "UTXO Locked 🔐", message: "You can tap the locked button to see your locked utxo's and unlock them. Be aware if your node reboots all utxo's will be unlocked by default!")
+//                
+//            } else {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.loadUnlockedUtxos()
+//                    displayAlert(viewController: self, isError: true, message: "utxo was not locked")
+//                }
+//            }
+//        }
     }
     
     private func updateInputs() {
@@ -1010,46 +1010,46 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     }
     
     private func getUtxosFromBtcRpc() {
-        let param:List_Unspent = .init(["minconf":0])
-        OnchainUtils.listUnspent(param: param) { [weak self] (utxos, message) in
-            guard let self = self else { return }
-            
-            guard let utxos = utxos else {
-                self.finishedLoading()
-                showAlert(vc: self, title: "Error", message: message ?? "unknown error fecthing your utxos")
-                return
-            }
-            
-            guard utxos.count > 0 else {
-                self.finishedLoading()
-                showAlert(vc: self, title: "No UTXO's", message: "")
-                return
-            }
-            
-            DispatchQueue.background(delay: 0.0, completion: {
-                for (i, utxo) in utxos.enumerated() {
-                    
-                    var utxoDict = utxo.dict
-                    utxoDict["isJoinMarket"] = self.isJmarketWallet
-                    
-                    func finish() {
-                        self.unlockedUtxos.append(Utxo(utxoDict))
-                        
-                        if i + 1 == utxos.count {
-                            self.unlockedUtxos = self.unlockedUtxos.sorted {
-                                $0.confs ?? 0 < $1.confs ?? 1
-                            }
-                            self.finishedLoading()
-                        }
-                    }
-                    
-                    //let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-                    let amountBtc = utxo.amount!
-                    utxoDict["amountSats"] = amountBtc.sats
-                    finish()
-                }
-            }
-        )}
+        //let param:List_Unspent = .init(["minconf":0])
+//        OnchainUtils.listUnspent(param: param) { [weak self] (utxos, message) in
+//            guard let self = self else { return }
+//            
+//            guard let utxos = utxos else {
+//                self.finishedLoading()
+//                showAlert(vc: self, title: "Error", message: message ?? "unknown error fecthing your utxos")
+//                return
+//            }
+//            
+//            guard utxos.count > 0 else {
+//                self.finishedLoading()
+//                showAlert(vc: self, title: "No UTXO's", message: "")
+//                return
+//            }
+//            
+//            DispatchQueue.background(delay: 0.0, completion: {
+//                for (i, utxo) in utxos.enumerated() {
+//                    
+//                    var utxoDict = utxo.dict
+//                    utxoDict["isJoinMarket"] = self.isJmarketWallet
+//                    
+//                    func finish() {
+//                        self.unlockedUtxos.append(Utxo(utxoDict))
+//                        
+//                        if i + 1 == utxos.count {
+//                            self.unlockedUtxos = self.unlockedUtxos.sorted {
+//                                $0.confs ?? 0 < $1.confs ?? 1
+//                            }
+//                            self.finishedLoading()
+//                        }
+//                    }
+//                    
+//                    //let currency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+//                    let amountBtc = utxo.amount!
+//                    utxoDict["amountSats"] = amountBtc.sats
+//                    finish()
+//                }
+//            }
+//        )}
     }
     
     private func removeSpinner() {

@@ -173,8 +173,6 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
         
         let entities:[ENTITY] = [.authKeys,
                                  .newNodes,
-                                 .peers,
-                                 .signers,
                                  .transactions,
                                  .utxos,
                                  .wallets]

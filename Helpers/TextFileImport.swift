@@ -119,8 +119,8 @@ class TextFileImport {
     
     class func saveSigner(encryptedSigner: Data, completion: @escaping ((Bool)) -> Void) {
         let dict = ["id":UUID(), "words":encryptedSigner, "added": Date()] as [String:Any]
-        CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
-            completion(success)
-        }
+//        CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
+//            completion(success)
+//        }
     }
 }

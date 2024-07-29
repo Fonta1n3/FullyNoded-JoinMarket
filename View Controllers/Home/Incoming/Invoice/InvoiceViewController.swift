@@ -7,19 +7,14 @@
 //
 
 import UIKit
-import secp256k1
 
 class InvoiceViewController: UIViewController, UITextFieldDelegate {
     
     var textToShareViaQRCode = String()
     var addressString = String()
     var qrCode = UIImage()
-    var nativeSegwit = Bool()
-    var p2shSegwit = Bool()
-    var legacy = Bool()
     let spinner = ConnectingView()
     let qrGenerator = QRGenerator()
-    var isHDInvoice = Bool()
     var descriptor = ""
     var wallet = [String:Any]()
     let ud = UserDefaults.standard
@@ -49,7 +44,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         addressImageView.layer.magnificationFilter = .nearest
         confirgureFields()
         configureTap()
-        getAddressSettings()
         addDoneButtonOnKeyboard()
         addressOutlet.text = ""
         invoiceText.text = ""
@@ -77,11 +71,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             self.isFiat = false
         }
         
-        if self.invoiceText.text.hasPrefix("l")  {
-            createLightningInvoice()
-        } else {
-           updateQRImage()
-        }
+        updateQRImage()
     }
     
     
@@ -116,24 +106,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     }
     
     
-    @IBAction func getAddressInfoAction(_ sender: Any) {
-        func getFromRpc() {
-            OnchainUtils.getAddressInfo(address: addressString) { (addressInfo, message) in
-                guard let addressInfo = addressInfo else { return }
-                showAlert(vc: self, title: "", message: addressInfo.hdkeypath + ": " + "solvable: \(addressInfo.solvable)")
-            }
-        }
-        
-        activeWallet { w in
-            guard let w = w else { getFromRpc(); return }
-            
-            if w.isJm {
-                showAlert(vc: self, title: "", message: "Address fetched from joinmarket.")
-            } else {
-                getFromRpc()
-            }
-        }
-    }
+    
     
     
     @IBAction func shareAddressAction(_ sender: Any) {
@@ -172,119 +145,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         showAlert(vc: self, title: "", message: "Invoice text copied ✓")
     }
     
-    @IBAction func generateLightningAction(_ sender: Any) {
-        createLightningInvoice()
-    }
-    
-    private func createLightningInvoice() {
-        spinner.addConnectingView(vc: self, description: "creating lightning invoice...")
         
-        isLndNode { [weak self] isLnd in
-            guard let self = self else { return }
-            
-            guard isLnd else {
-                self.createCLInvoice()
-                return
-            }
-            self.createLNDInvoice()
-        }
-    }
-    
-    private func createLNDInvoice() {
-        var amount = ""
-        var param:[String:Any] = [:]
-
-        if amountField.text != "" {
-            if isBtc {
-                if let dbl = Double(amountField.text!) {
-                    let int = Int(dbl * 100000000.0)
-                    amount = "\(int)"
-                }
-            } else if isSats {
-                if let int = Double(amountField.text!) {
-                    amount = "\(Int(int))"
-                }
-            }
-            param["value"] = amount
-        }
-        
-        var memoValue = labelField.text ?? "Fully Noded LND Invoice ⚡️"
-        
-        if memoValue == "" {
-            memoValue = "Fully Noded LND Invoice ⚡️"
-        }
-        
-        if messageField.text != "" {
-            memoValue += "- \(messageField.text!)"
-        }
-        
-        param["memo"] = "\(memoValue)"
-        param["private"] = true
-        
-        LndRpc.sharedInstance.command(.addinvoice, param, nil, nil) { (response, error) in
-            guard let dict = response, let bolt11 = dict["payment_request"] as? String else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: error ?? "we had an issue getting your lightning invoice")
-                return
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.showLightningInvoice(bolt11)
-            }
-        }
-    }
-    
-    private func createCLInvoice() {
-        let commandId = UUID()
-        spinner.addConnectingView(vc: self, description: "fetching cln config...")
-        LightningRPC.sharedInstance.command(id: commandId, method: .listconfigs, param: nil) { (id, response, errorDesc) in
-            guard id == commandId else { return }
-                    
-            guard let response = response as? [String:Any] else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error fetching config.", message: errorDesc ?? "unknown")
-                return
-            }
-            
-            guard let experimentalOffers = response["experimental-offers"] as? Bool, experimentalOffers else {
-                self.createBolt11Invoice()
-                return
-            }
-            
-            self.promptForBolt12Or11()
-        }
-    }
-    
-    private func promptForBolt12Or11() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            let alert = UIAlertController(title: "Select invoice type.", message: "", preferredStyle: .alert)
-
-            alert.addAction(UIAlertAction(title: "Bolt 11", style: .default, handler: { action in
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-
-                    self.createBolt11Invoice()
-                }
-            }))
-
-            alert.addAction(UIAlertAction(title: "Bolt 12", style: .default, handler: { action in
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-
-                    self.createBolt12Invoice()
-                }
-            }))
-
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
     @IBAction func generateOnchainAction(_ sender: Any) {
         generateOnchainInvoice()
     }
@@ -292,140 +153,8 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     func generateOnchainInvoice() {
         spinner.addConnectingView(vc: self, description: "fetching address...")
         
-        addressOutlet.text = ""
-        
-        activeWallet { [weak self] wallet in
-            guard let self = self else { return }
-            
-            guard let wallet = wallet else {
-                self.fetchAddress()
-                return
-            }
-            if wallet.isJm {
-                self.getReceiveAddressJm(wallet: wallet)
-            } else if wallet.type == WalletType.descriptor.stringValue {
-                self.getReceieveAddressForFullyNodedWallet(wallet)
-            } else {
-                self.fetchAddress()
-            }
-        }
+        print("generate address")
     }
-    
-    private func createBolt11Invoice() {
-        var param:[String:Any] = ["expiry": 86400]
-        var description = labelField.text ?? "Fully Noded CLN invoice"
-        
-        if description == "" {
-            description = "Fully Noded CLN bolt11 invoice"
-        }
-        
-        let label = "Fully Noded CLN invoice \(randomString(length: 10))"
-        param["label"] = label
-        
-        if amountField.text != "" {
-            if isBtc {
-                if let dbl = Double(amountField.text!) {
-                    param["amount_msat"] = Int(dbl * 100000000000.0)
-                }
-            } else if isSats {
-                if let int = Double(amountField.text!) {
-                    param["amount_msat"] = Int(int * 1000)
-                }
-            }
-        } else {
-            param["amount_msat"] = "any"
-        }
-        
-        if messageField.text != "" {
-            description += "\n\n" + messageField.text!
-        }
-        param["description"] = description
-        let commandId = UUID()
-        
-        LightningRPC.sharedInstance.command(id: commandId, method: .invoice, param: param) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self else { return }
-            
-            guard let dict = response as? [String:Any] else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "we had an issue getting your lightning invoice")
-                return
-            }
-            
-            var inv = "no invoice received..."
-            
-            if let bolt11 = dict["bolt11"] as? String {
-                inv = bolt11
-            } else if let bolt12 = dict["bolt12"] as? String {
-                inv = bolt12
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.showLightningInvoice(inv)
-            }
-            
-            if let warning = dict["warning_capacity"] as? String {
-                if warning != "" {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        showAlert(vc: self, title: "Warning", message: warning)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func createBolt12Invoice() {
-        // amount description [issuer] [label] [quantity_max] [absolute_expiry] [recurrence] [recurrence_base] [recurrence_paywindow] [recurrence_limit] [single_use]
-        var param:[String:Any] = [:]
-        let defDesc = "Fully Noded CLN bolt12 offer"
-        var description = labelField.text ?? defDesc
-
-        if amountField.text != "" {
-            if isBtc {
-                if let dbl = Double(amountField.text!) {
-                    param["amount"] = Int(dbl * 100000000000.0)
-                }
-            } else if isSats {
-                if let int = Double(amountField.text!) {
-                    param["amount"] = Int(int * 1000)
-                }
-            }
-        } else {
-            param["amount"] = "any"
-        }
-
-        if messageField.text != "" {
-            description += "\n\n" + messageField.text!
-        }
-        param["description"] = description
-        let commandId = UUID()
-
-        LightningRPC.sharedInstance.command(id: commandId, method: .offer, param: param) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self else { return }
-
-            guard let dict = response as? [String:Any], let offer = dict["bolt12"] as? String else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "we had an issue getting your lightning offer")
-                return
-            }
-
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-
-                self.showLightningInvoice(offer)
-            }
-
-            if let warning = dict["warning_capacity"] as? String {
-                if warning != "" {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        showAlert(vc: self, title: "Warning", message: warning)
-                    }
-                }
-            }
-        }
-    }
-    
     
     private func getReceiveAddressJm(wallet: Wallet) {
         DispatchQueue.main.async { [weak self] in
@@ -522,49 +251,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    private func getReceieveAddressForFullyNodedWallet(_ wallet: Wallet) {
-        let index = Int(wallet.index) + 1
-        
-        CoreDataService.update(id: wallet.id, keyToUpdate: "index", newValue: Int64(index), entity: .wallets) { success in
-            guard success else { return }
-            
-            let param:Derive_Addresses = .init(["descriptor":wallet.receiveDescriptor, "range":[index,index]])
-            
-                                                Reducer.sharedInstance.makeCommand(command: .deriveaddresses(param: param)) { [weak self] (response, errorMessage) in
-                guard let self = self else { return }
-                
-                guard let addresses = response as? NSArray, let address = addresses[0] as? String else {
-                    showAlert(vc: self, title: "", message: errorMessage ?? "error getting multisig address")
-                    return
-                }
-                
-                self.showAddress(address: address)
-            }
-        }
-    }
-    
-    func getAddressSettings() {
-        let ud = UserDefaults.standard
-        nativeSegwit = ud.object(forKey: "nativeSegwit") as? Bool ?? true
-        p2shSegwit = ud.object(forKey: "p2shSegwit") as? Bool ?? false
-        legacy = ud.object(forKey: "legacy") as? Bool ?? false
-    }
-    
-    func fetchAddress() {
-        var addressType = ""
-        
-        if self.nativeSegwit {
-            addressType = "bech32"
-        } else if self.legacy {
-            addressType = "legacy"
-        } else if self.p2shSegwit {
-            addressType = "p2sh-segwit"
-        }
-        
-        let param:Get_New_Address = .init(["address_type":addressType])
-        
-        self.getAddress(param)
-    }
     
     func showAddress(address: String) {
         DispatchQueue.main.async { [weak self] in
@@ -579,22 +265,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    private func showLightningInvoice(_ invoice: String) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            if invoice.hasPrefix("lno") {
-                self.addressOutlet.text = "see bolt12 lightning offer below"
-                self.invoiceHeader.text = "Bolt12 Offer"
-            } else {
-                self.addressOutlet.text = "see bolt11 lightning invoice below"
-            }
-            
-            self.addressString = invoice
-            self.qrView.image = self.generateQrCode(key: invoice)
-            self.invoiceText.text = invoice
-            self.spinner.removeConnectingView()
-        }
-    }
     
     private func shareText(_ text: String) {
         DispatchQueue.main.async { [weak self] in
@@ -608,20 +278,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    func getAddress(_ params: Get_New_Address) {
-        Reducer.sharedInstance.makeCommand(command: .getnewaddress(param: params)) { [weak self] (response, errorMessage) in
-            guard let self = self else { return }
-            guard let address = response as? String else {
-                self.spinner.removeConnectingView()
-                
-                showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown error fetching address")
-                
-                return
-            }
-            
-            self.showAddress(address: address)
-        }
-    }
     
     @objc func textFieldDidChange(_ textField: UITextField) {
         updateQRImage()
@@ -636,7 +292,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     func updateQRImage() {
         var newImage = UIImage()
         var amount = self.amountField.text ?? ""
-                
+        
         if isSats {
             if amount != "" {
                 if let dbl = Double(amount) {
@@ -645,41 +301,39 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             }
         }
         
-        if !addressString.hasPrefix("lntb") && !addressString.hasPrefix("lightning:") && !addressString.hasPrefix("lnbc") && !addressString.hasPrefix("lnbcrt") {
-            let label = self.labelField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
-            let message = self.messageField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
-            textToShareViaQRCode = "bitcoin:\(self.addressString)"
-            let dict = ["amount": amount, "label": label, "message": message]
-            
-            if amount != "" || label != "" || message != "" {
-                textToShareViaQRCode += "?"
-            }
-            
-            for (key, value) in dict {
-                if textToShareViaQRCode.contains("amount=") || textToShareViaQRCode.contains("label=") || textToShareViaQRCode.contains("message=") {
-                    if value != "" {
-                        textToShareViaQRCode += "&\(key)=\(value)"
-                    }
-                } else {
-                    if value != "" {
-                        textToShareViaQRCode += "\(key)=\(value)"
-                    }
+        let label = self.labelField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
+        let message = self.messageField.text?.replacingOccurrences(of: " ", with: "%20") ?? ""
+        textToShareViaQRCode = "bitcoin:\(self.addressString)"
+        let dict = ["amount": amount, "label": label, "message": message]
+        
+        if amount != "" || label != "" || message != "" {
+            textToShareViaQRCode += "?"
+        }
+        
+        for (key, value) in dict {
+            if textToShareViaQRCode.contains("amount=") || textToShareViaQRCode.contains("label=") || textToShareViaQRCode.contains("message=") {
+                if value != "" {
+                    textToShareViaQRCode += "&\(key)=\(value)"
+                }
+            } else {
+                if value != "" {
+                    textToShareViaQRCode += "\(key)=\(value)"
                 }
             }
+        }
+        
+        newImage = self.generateQrCode(key:textToShareViaQRCode)
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
             
-            newImage = self.generateQrCode(key:textToShareViaQRCode)
+            UIView.transition(with: self.qrView,
+                              duration: 0.75,
+                              options: .transitionCrossDissolve,
+                              animations: { self.qrView.image = newImage },
+                              completion: nil)
             
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                UIView.transition(with: self.qrView,
-                                  duration: 0.75,
-                                  options: .transitionCrossDissolve,
-                                  animations: { self.qrView.image = newImage },
-                                  completion: nil)
-                
-                self.invoiceText.text = self.textToShareViaQRCode
-            }
+            self.invoiceText.text = self.textToShareViaQRCode
         }
     }
     
@@ -721,26 +375,4 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     @objc func dismissKeyboard() {
         view.endEditing(true)
     }
-    
-    func silentPayment() {
-        let privateSign1 = try! secp256k1.Signing.PrivateKey()
-        let privateSign2 = try! secp256k1.Signing.PrivateKey()
-        
-        let privateKey1 = try! secp256k1.KeyAgreement.PrivateKey(rawRepresentation: privateSign1.rawRepresentation)
-        let privateKey2 = try! secp256k1.KeyAgreement.PrivateKey(rawRepresentation: privateSign2.rawRepresentation)
-        
-        let sharedSecret1 = try! privateKey1.sharedSecretFromKeyAgreement(with: privateKey2.publicKey)
-        let sharedSecret2 = try! privateKey2.sharedSecretFromKeyAgreement(with: privateKey1.publicKey)
-        
-        let sharedSecretSign1 = try! secp256k1.Signing.PrivateKey(rawRepresentation: sharedSecret1.bytes)
-        let sharedSecretSign2 = try! secp256k1.Signing.PrivateKey(rawRepresentation: sharedSecret2.bytes)
-        
-        // Payable Silent Payment public key
-        let xonlyTweak2 = try! sharedSecretSign2.publicKey.xonly.add(privateSign1.publicKey.xonly.bytes)
-        
-        // Spendable Silent Payment private key
-        let privateTweak1 = try! sharedSecretSign1.add(xonly: privateSign1.publicKey.xonly.bytes)
-         
-    }
-    
 }

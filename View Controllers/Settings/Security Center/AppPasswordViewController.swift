@@ -29,7 +29,6 @@ class AppPasswordViewController: UIViewController, UITextFieldDelegate, UINaviga
         
         buttonOutlet.clipsToBounds = true
         buttonOutlet.layer.cornerRadius = 8
-        buttonOutlet.showsTouchWhenHighlighted = true
         
         if KeyChain.getData("UnlockPassword") != nil {
             isResetting = true

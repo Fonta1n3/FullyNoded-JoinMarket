@@ -46,92 +46,92 @@ class LockedViewController: UIViewController {
     private func loadLockedUTxos() {
         lockedUtxos.removeAll()
         
-        Reducer.sharedInstance.makeCommand(command: .listlockunspent) { [weak self] (response, errorMessage) in
-            guard let self = self else { return }
-            
-            guard let locked = response as? NSArray else {
-                self.finishedLoading()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
-                return
-            }
-            
-            guard locked.count > 0 else {
-                self.finishedLoading()
-                showAlert(vc: self, title: "No locked UTXO's", message: "")
-                return
-            }
-            
-            for lockedUtxo in locked {
-                guard let utxoDict = lockedUtxo as? [String:Any] else {
-                    displayAlert(viewController: self, isError: true, message: "Error decoding your locked UTXO's")
-                    return
-                }
-                
-                let utxoStruct = Utxo(utxoDict)
-                self.lockedUtxos.append(utxoStruct)
-            }
-            
-            CoreDataService.retrieveEntity(entityName: .utxos) { savedLockedUtxos in
-                guard let savedLockedUtxos = savedLockedUtxos, savedLockedUtxos.count > 0 else {
-                    self.finishedLoading()
-                    return
-                }
-                
-                for savedLockedUtxo in savedLockedUtxos {
-                    let savedUtxoStruct = Utxo(savedLockedUtxo)
-                    let savedUtxoOutpoint = savedUtxoStruct.txid + "\(savedUtxoStruct.vout)"
-                    var isSaved = false
-                    
-                    for (i, utxo) in self.lockedUtxos.enumerated() {
-                        let outpoint = utxo.txid + "\(utxo.vout)"
-                        isSaved = outpoint == savedUtxoOutpoint
-                        
-                        if isSaved {
-                            self.lockedUtxos[i] = savedUtxoStruct
-                        }
-                    }
-                }
-                
-                self.lockedUtxos = self.lockedUtxos.sorted { $0.confs ?? 0 < $1.confs ?? 0 }
-                self.finishedLoading()
-            }
-        }
+//        Reducer.sharedInstance.makeCommand(command: .listlockunspent) { [weak self] (response, errorMessage) in
+//            guard let self = self else { return }
+//            
+//            guard let locked = response as? NSArray else {
+//                self.finishedLoading()
+//                displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+//                return
+//            }
+//            
+//            guard locked.count > 0 else {
+//                self.finishedLoading()
+//                showAlert(vc: self, title: "No locked UTXO's", message: "")
+//                return
+//            }
+//            
+//            for lockedUtxo in locked {
+//                guard let utxoDict = lockedUtxo as? [String:Any] else {
+//                    displayAlert(viewController: self, isError: true, message: "Error decoding your locked UTXO's")
+//                    return
+//                }
+//                
+//                let utxoStruct = Utxo(utxoDict)
+//                self.lockedUtxos.append(utxoStruct)
+//            }
+//            
+//            CoreDataService.retrieveEntity(entityName: .utxos) { savedLockedUtxos in
+//                guard let savedLockedUtxos = savedLockedUtxos, savedLockedUtxos.count > 0 else {
+//                    self.finishedLoading()
+//                    return
+//                }
+//                
+//                for savedLockedUtxo in savedLockedUtxos {
+//                    let savedUtxoStruct = Utxo(savedLockedUtxo)
+//                    let savedUtxoOutpoint = savedUtxoStruct.txid + "\(savedUtxoStruct.vout)"
+//                    var isSaved = false
+//                    
+//                    for (i, utxo) in self.lockedUtxos.enumerated() {
+//                        let outpoint = utxo.txid + "\(utxo.vout)"
+//                        isSaved = outpoint == savedUtxoOutpoint
+//                        
+//                        if isSaved {
+//                            self.lockedUtxos[i] = savedUtxoStruct
+//                        }
+//                    }
+//                }
+//                
+//                self.lockedUtxos = self.lockedUtxos.sorted { $0.confs ?? 0 < $1.confs ?? 0 }
+//                self.finishedLoading()
+//            }
+//        }
     }
     
     private func unlock(_ utxo: Utxo) {
         spinner.addConnectingView(vc: self, description: "unlocking...")
-        let param:Lock_Unspent = .init(["unlock": true, "transactions": [["txid":utxo.txid,"vout":utxo.vout]]])
-        
-        Reducer.sharedInstance.makeCommand(command: .lockunspent(param)) { (response, errorMessage) in
-            guard let success = response as? Bool else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.loadLockedUTxos()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
-                }
-                
-                return
-            }
-            
-            if success {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.loadLockedUTxos()
-                }
-                
-                showAlert(vc: self, title: "UTXO Unlocked 🔓", message: "")
-                
-            } else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.loadLockedUTxos()
-                    displayAlert(viewController: self, isError: true, message: "utxo was not locked")
-                }
-            }
-        }
+//        let param:Lock_Unspent = .init(["unlock": true, "transactions": [["txid":utxo.txid,"vout":utxo.vout]]])
+//        
+//        Reducer.sharedInstance.makeCommand(command: .lockunspent(param)) { (response, errorMessage) in
+//            guard let success = response as? Bool else {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.loadLockedUTxos()
+//                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "unknown error")
+//                }
+//                
+//                return
+//            }
+//            
+//            if success {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.loadLockedUTxos()
+//                }
+//                
+//                showAlert(vc: self, title: "UTXO Unlocked 🔓", message: "")
+//                
+//            } else {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.loadLockedUTxos()
+//                    displayAlert(viewController: self, isError: true, message: "utxo was not locked")
+//                }
+//            }
+//        }
     }
 }
 

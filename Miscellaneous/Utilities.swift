@@ -212,47 +212,47 @@ public let currencies:[[String:String]] = [
     ["TWD": "NT$"]
 ]
 
-public func isWalletRPC(command: BTC_CLI_COMMAND) -> Bool {
-    var boolToReturn = Bool()
-    
-    switch command {
-    case .listtransactions,
-         .getbalance,
-         .getnewaddress,
-         .getwalletinfo,
-         .getrawchangeaddress,
-         .importmulti,
-         .importprivkey,
-         .rescanblockchain,
-         //.fundrawtransaction,
-         .listunspent,
-         .walletprocesspsbt,
-         .gettransaction,
-         .getaddressinfo,
-         .bumpfee,
-         //.signrawtransactionwithwallet,
-         .listaddressgroupings,
-         .listlabels,
-         .getaddressesbylabel,
-         .listlockunspent,
-         .lockunspent,
-         .abortrescan,
-         .walletcreatefundedpsbt,
-         .encryptwallet,
-         .walletpassphrase,
-         .walletpassphrasechange,
-         .walletlock,
-         .psbtbumpfee,
-         .importdescriptors:
-         //.signmessage:
-        boolToReturn = true
-        
-    default:
-        boolToReturn = false
-    }
-    
-    return boolToReturn
-}
+//public func isWalletRPC(command: BTC_CLI_COMMAND) -> Bool {
+//    var boolToReturn = Bool()
+//    
+//    switch command {
+//    case .listtransactions,
+//         .getbalance,
+//         .getnewaddress,
+//         .getwalletinfo,
+//         .getrawchangeaddress,
+//         .importmulti,
+//         .importprivkey,
+//         .rescanblockchain,
+//         //.fundrawtransaction,
+//         .listunspent,
+//         .walletprocesspsbt,
+//         .gettransaction,
+//         .getaddressinfo,
+//         .bumpfee,
+//         //.signrawtransactionwithwallet,
+//         .listaddressgroupings,
+//         .listlabels,
+//         .getaddressesbylabel,
+//         .listlockunspent,
+//         .lockunspent,
+//         .abortrescan,
+//         .walletcreatefundedpsbt,
+//         .encryptwallet,
+//         .walletpassphrase,
+//         .walletpassphrasechange,
+//         .walletlock,
+//         .psbtbumpfee,
+//         .importdescriptors:
+//         //.signmessage:
+//        boolToReturn = true
+//        
+//    default:
+//        boolToReturn = false
+//    }
+//    
+//    return boolToReturn
+//}
 
 public func shakeAlert(viewToShake: UIView) {
     let animation = CABasicAnimation(keyPath: "position")

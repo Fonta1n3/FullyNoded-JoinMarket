@@ -173,68 +173,68 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             }
         }
     
-        let param: Wallet_Process_PSBT = .init(["psbt": psbt, "sign": false, "sighashtype": "ALL"])
-        Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: param)) { [weak self] (object, errorDescription) in
-            guard let self = self else { return }
-            
-            guard let dict = object as? NSDictionary, let processedPsbt = dict["psbt"] as? String else {
-                showAlert(vc: self, title: "", message: "There was an issue processing your psbt with the active wallet: \(errorDescription ?? "unknown error")")
-                
-                return
-            }
-            
-            self.processedPsbt = processedPsbt
-            enableExportButton()
-            
-            if signed {
-                self.finalizePsbt(processedPsbt)
-            } else {
-                self.unsignedPsbt = processedPsbt
-                self.enableSignButton()
-                self.load()
-            }
-        }
+//        let param: Wallet_Process_PSBT = .init(["psbt": psbt, "sign": false, "sighashtype": "ALL"])
+//        Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: param)) { [weak self] (object, errorDescription) in
+//            guard let self = self else { return }
+//            
+//            guard let dict = object as? NSDictionary, let processedPsbt = dict["psbt"] as? String else {
+//                showAlert(vc: self, title: "", message: "There was an issue processing your psbt with the active wallet: \(errorDescription ?? "unknown error")")
+//                
+//                return
+//            }
+//            
+//            self.processedPsbt = processedPsbt
+//            enableExportButton()
+//            
+//            if signed {
+//                //self.finalizePsbt(processedPsbt)
+//            } else {
+//                self.unsignedPsbt = processedPsbt
+//                self.enableSignButton()
+//                self.load()
+//            }
+//        }
     }
     
-    private func finalizePsbt(_ psbt: String) {
-        guard let hex = Keys.finalize(psbt) else {
-            // Libwally used to fail for multisig psbt's so falling back to core finalization.
-            let param:Finalize_Psbt = .init(["psbt": psbt])
-            Reducer.sharedInstance.makeCommand(command: .finalizepsbt(param)) { [weak self] (object, errorDescription) in
-                guard let self = self else { return }
-                
-                guard let result = object as? NSDictionary, let complete = result["complete"] as? Bool else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "There was an issue finalizing your psbt: \(errorDescription ?? "unknown error")")
-                    return
-                }
-                
-                self.enableExportButton()
-                
-                guard complete, let hex = result["hex"] as? String else {
-                    guard let psbt = result["psbt"] as? String else {
-                        self.spinner.removeConnectingView()
-                        showAlert(vc: self, title: "", message: "There was an issue finalizing your psbt: \(errorDescription ?? "unknown error")")
-                        return
-                    }
-                    
-                    self.unsignedPsbt = psbt
-                    self.enableSignButton()
-                    self.load()
-                    
-                    return
-                }
-                
-                self.signedRawTx = hex
-                self.load()
-            }
-            
-            return
-        }
-
-        self.signedRawTx = hex
-        self.load()
-    }
+//    private func finalizePsbt(_ psbt: String) {
+//        guard let hex = Keys.finalize(psbt) else {
+//            // Libwally used to fail for multisig psbt's so falling back to core finalization.
+//            let param:Finalize_Psbt = .init(["psbt": psbt])
+//            Reducer.sharedInstance.makeCommand(command: .finalizepsbt(param)) { [weak self] (object, errorDescription) in
+//                guard let self = self else { return }
+//                
+//                guard let result = object as? NSDictionary, let complete = result["complete"] as? Bool else {
+//                    self.spinner.removeConnectingView()
+//                    showAlert(vc: self, title: "", message: "There was an issue finalizing your psbt: \(errorDescription ?? "unknown error")")
+//                    return
+//                }
+//                
+//                self.enableExportButton()
+//                
+//                guard complete, let hex = result["hex"] as? String else {
+//                    guard let psbt = result["psbt"] as? String else {
+//                        self.spinner.removeConnectingView()
+//                        showAlert(vc: self, title: "", message: "There was an issue finalizing your psbt: \(errorDescription ?? "unknown error")")
+//                        return
+//                    }
+//                    
+//                    self.unsignedPsbt = psbt
+//                    self.enableSignButton()
+//                    self.load()
+//                    
+//                    return
+//                }
+//                
+//                self.signedRawTx = hex
+//                self.load()
+//            }
+//            
+//            return
+//        }
+//
+//        self.signedRawTx = hex
+//        self.load()
+//    }
     
     private func enableExportButton() {
         enableView(exportBackgroundView)
@@ -414,9 +414,6 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             enableExportButton()
             signedRawTx = processed
             load()
-        } else if processed.lowercased().hasPrefix("ur:bytes") {
-            self.blind = true
-            self.parseBlindPsbt(processed)
         } else if processed.count == 64 {
             fetchTxFromId(txid: processed)
         } else {
@@ -454,23 +451,17 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 return
             }
                         
-            if let text = data.utf8String, text.lowercased().hasPrefix("ur:bytes") {
+            if Keys.validPsbt(data.base64EncodedString()) {
+                unsignedPsbt = data.base64EncodedString()
                 self.reset()
-                self.blind = true
-                self.parseBlindPsbt(text)
+                processPsbt(unsignedPsbt)
+            } else if let psbtUtf8 = data.utf8String, Keys.validPsbt(psbtUtf8) {
+                unsignedPsbt = psbtUtf8
+                self.reset()
+                processPsbt(psbtUtf8)
             } else {
-                if Keys.validPsbt(data.base64EncodedString()) {
-                    unsignedPsbt = data.base64EncodedString()
-                    self.reset()
-                    processPsbt(unsignedPsbt)
-                } else if let psbtUtf8 = data.utf8String, Keys.validPsbt(psbtUtf8) {
-                    unsignedPsbt = psbtUtf8
-                    self.reset()
-                    processPsbt(psbtUtf8)
-                } else {
-                    spinner.removeConnectingView()
-                    showAlert(vc: self, title: "Invalid format", message: "That is not a valid BIP174 format.")
-                }                
+                spinner.removeConnectingView()
+                showAlert(vc: self, title: "Invalid format", message: "That is not a valid BIP174 format.")
             }
             
             return
@@ -490,46 +481,11 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     }
     
     private func promptToExportPsbt() {
-        let alert = UIAlertController(title: "Export encrypted?",
-                                      message: "You can either export this psbt encrypted or in plain text.",
-                                      preferredStyle: .alert)
-        
-        alert.addAction(UIAlertAction(title: "Encrypted", style: .default, handler: { [weak self] action in
-            guard let self = self else { return }
-            
-            guard let data = Data(base64Encoded: self.unsignedPsbt),
-                  let encrypted = Crypto.blindPsbt(data),
-                  let ur = URHelper.dataToUrBytes(encrypted) else {
-                showAlert(vc: self, title: "", message: "Error converting to data or encrypting.")
-                return
-            }
-            
-            self.exportPsbt(blindedpsbt: ur.qrString, plainText: nil)
-        }))
-        
-        alert.addAction(UIAlertAction(title: "Unencrypted", style: .default, handler: { [weak self] action in
-            guard let self = self else { return }
-            
-            self.exportPsbt(blindedpsbt: nil, plainText: self.unsignedPsbt)
-        }))
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-        alert.popoverPresentationController?.sourceView = self.view
-        self.present(alert, animated: true) {}
+        self.exportPsbt(blindedpsbt: nil, plainText: self.unsignedPsbt)
     }
                     
     @IBAction func exportAction(_ sender: Any) {
-        if self.blind {
-            guard let data = Data(base64Encoded: self.unsignedPsbt),
-                  let encrypted = Crypto.blindPsbt(data),
-                  let ur = URHelper.dataToUrBytes(encrypted) else {
-                showAlert(vc: self, title: "", message: "Error converting to data or encrypting.")
-                return
-            }
-            
-            self.exportPsbt(blindedpsbt: ur.qrString, plainText: nil)
-            
-        } else if unsignedPsbt != "" {
+        if unsignedPsbt != "" {
             promptToExportPsbt()
         } else if signedRawTx != "" {
             exportTxn(txn: signedRawTx)
@@ -558,7 +514,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     
     @IBAction func bumpFeeAction(_ sender: Any) {
         if confs == 0 && alreadyBroadcast {
-            bumpFee()
+            //bumpFee()
         } else {
             showAlert(vc: self, title: "", message: "You can only bump the fee for transactions that have zero confirmations.")
         }
@@ -569,32 +525,32 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         
         spinner.addConnectingView(vc: self, description: "Checking for wallet encryption...")
         
-        OnchainUtils.getWalletInfo { [weak self] (walletInfo, message) in
-            guard let self = self else { return }
-                        
-            guard let walletInfo = walletInfo else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error getting wallet info...", message: message ?? "unknown")
-                return
-            }
-            
-            guard !walletInfo.locked else {
-                self.unlockWallet()
-                return
-            }
-            
-            if UserDefaults.standard.object(forKey: "passphrasePrompt") == nil {
-                self.spinner.removeConnectingView()
-                self.signNow(nil)
-            } else {
-                self.spinner.removeConnectingView()
-                self.setPassphrase { [weak self] passphrase in
-                    guard let self = self else { return }
-                    
-                    self.signNow(passphrase)
-                }
-            }
-        }
+//        OnchainUtils.getWalletInfo { [weak self] (walletInfo, message) in
+//            guard let self = self else { return }
+//                        
+//            guard let walletInfo = walletInfo else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "Error getting wallet info...", message: message ?? "unknown")
+//                return
+//            }
+//            
+//            guard !walletInfo.locked else {
+//                self.unlockWallet()
+//                return
+//            }
+//            
+//            if UserDefaults.standard.object(forKey: "passphrasePrompt") == nil {
+//                self.spinner.removeConnectingView()
+//                self.signNow(nil)
+//            } else {
+//                self.spinner.removeConnectingView()
+//                self.setPassphrase { [weak self] passphrase in
+//                    guard let self = self else { return }
+//                    
+//                    self.signNow(passphrase)
+//                }
+//            }
+//        }
     }
     
     private func setPassphrase(completion: @escaping (String?) -> Void) {
@@ -625,80 +581,80 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    private func unlockWallet() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let title = "Wallet locked 🔒"
-            let message = "Enter your encryption password to unlock it."
-            
-            let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-            
-            let unlock = UIAlertAction(title: "Unlock", style: .default) { [weak self] alertAction in
-                guard let self = self else { return }
-                
-                let password = (alert.textFields![0] as UITextField).text ?? ""
-                
-                self.spinner.addConnectingView(vc: self, description: "Unlocking wallet...")
-                let param:Wallet_Passphrase = .init(
-                    [
-                        "passphrase": password,
-                        "timeout": 600
-                    ]
-                )
-                Reducer.sharedInstance.makeCommand(command: .walletpassphrase(param: param)) { [weak self] (response, errorMessage) in
-                    guard let self = self else { return }
-                    
-                    self.spinner.removeConnectingView()
-                    
-                    guard errorMessage == nil else {
-                        self.showError(error: errorMessage ?? "Unknown error unlocking your wallet.")
-                        return
-                    }
-                    
-                    showAlert(vc: self, title: "Wallet unlocked ✓", message: "Try signing again.")
-                }
-            }
-            
-            alert.addTextField { textField in
-                textField.keyboardAppearance = .dark
-                textField.isSecureTextEntry = true
-                textField.autocorrectionType = .no
-                textField.spellCheckingType = .no
-            }
-            
-            alert.addAction(unlock)
-            
-            let cancel = UIAlertAction(title: "Cancel", style: .default) { alertAction in }
-            alert.addAction(cancel)
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
+//    private func unlockWallet() {
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            
+//            let title = "Wallet locked 🔒"
+//            let message = "Enter your encryption password to unlock it."
+//            
+//            let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+//            
+//            let unlock = UIAlertAction(title: "Unlock", style: .default) { [weak self] alertAction in
+//                guard let self = self else { return }
+//                
+//                let password = (alert.textFields![0] as UITextField).text ?? ""
+//                
+//                self.spinner.addConnectingView(vc: self, description: "Unlocking wallet...")
+//                let param:Wallet_Passphrase = .init(
+//                    [
+//                        "passphrase": password,
+//                        "timeout": 600
+//                    ]
+//                )
+//                Reducer.sharedInstance.makeCommand(command: .walletpassphrase(param: param)) { [weak self] (response, errorMessage) in
+//                    guard let self = self else { return }
+//                    
+//                    self.spinner.removeConnectingView()
+//                    
+//                    guard errorMessage == nil else {
+//                        self.showError(error: errorMessage ?? "Unknown error unlocking your wallet.")
+//                        return
+//                    }
+//                    
+//                    showAlert(vc: self, title: "Wallet unlocked ✓", message: "Try signing again.")
+//                }
+//            }
+//            
+//            alert.addTextField { textField in
+//                textField.keyboardAppearance = .dark
+//                textField.isSecureTextEntry = true
+//                textField.autocorrectionType = .no
+//                textField.spellCheckingType = .no
+//            }
+//            
+//            alert.addAction(unlock)
+//            
+//            let cancel = UIAlertAction(title: "Cancel", style: .default) { alertAction in }
+//            alert.addAction(cancel)
+//            self.present(alert, animated: true, completion: nil)
+//        }
+//    }
     
     private func signNow(_ passphrase: String?) {
         isSigning = true
         spinner.addConnectingView(vc: self, description: "signing...")
         
-        Signer.sign(psbt: self.unsignedPsbt, passphrase: passphrase) { [weak self] (signedPsbt, rawTx, errorMessage) in
-            guard let self = self else { return }
-            
-            self.disableSignButton()
-            
-            if rawTx != nil {
-                self.unsignedPsbt = ""
-                self.signedRawTx = rawTx!
-                self.enableSendButton()
-                self.load()
-                
-            } else if signedPsbt != nil {
-                self.unsignedPsbt = signedPsbt!
-                self.load()
-                
-            } else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error Signing", message: errorMessage ?? "unknown")
-            }
-        }
+//        Signer.sign(psbt: self.unsignedPsbt, passphrase: passphrase) { [weak self] (signedPsbt, rawTx, errorMessage) in
+//            guard let self = self else { return }
+//            
+//            self.disableSignButton()
+//            
+//            if rawTx != nil {
+//                self.unsignedPsbt = ""
+//                self.signedRawTx = rawTx!
+//                self.enableSendButton()
+//                self.load()
+//                
+//            } else if signedPsbt != nil {
+//                self.unsignedPsbt = signedPsbt!
+//                self.load()
+//                
+//            } else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "Error Signing", message: errorMessage ?? "unknown")
+//            }
+//        }
     }
     
 //    private func fundChannelComplete() {
@@ -766,76 +722,76 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         CoreDataService.saveEntity(dict: transaction, entityName: .transactions) { _ in }
     }
     
-    private func bumpFee() {
-        spinner.addConnectingView(vc: self, description: "increasing fee...")
-        let param_bump_fee:Bump_Fee = .init(["txid":self.txid])
-        let param_psbt_bump_fee:PSBT_Bump_Fee = .init(["txid":self.txid])
-        let bumpfee:BTC_CLI_COMMAND = .bumpfee(param: param_bump_fee)
-        let psbtBumpFee:BTC_CLI_COMMAND = .psbtbumpfee(param: param_psbt_bump_fee)
-        var command:BTC_CLI_COMMAND!
-        command = bumpfee
-        
-        OnchainUtils.getWalletInfo { [weak self] (walletInfo, message) in
-            guard let self = self else { return }
-            
-            guard let walletInfo = walletInfo else {
-                self.showError(error: "Error getting wallet info: \(message ?? "unknown")")
-                return
-            }
-            
-            if let privkeysenabled = walletInfo.private_keys_enabled, !privkeysenabled,
-                let version = UserDefaults.standard.object(forKey: "version") as? Int,
-                version >= 210000 {
-                command = psbtBumpFee
-            }
-            
-            Reducer.sharedInstance.makeCommand(command: command) { [weak self] (response, errorMessage) in
-                guard let self = self else { return }
-                
-                guard let result = response as? NSDictionary,
-                        let originalFee = result["origfee"] as? Double,
-                        let newFee = result["fee"] as? Double else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "There was an issue increasing the fee.", message: errorMessage ?? "unknown")
-                    return
-                }
-                
-                guard let psbt = result["psbt"] as? String else {
-                    self.spinner.removeConnectingView()
-                    if let txid = result["txid"] as? String {
-                        self.saveNewTx(txid)
-                        displayAlert(viewController: self, isError: false, message: "fee bumped from \(originalFee.avoidNotation) to \(newFee.avoidNotation)")
-                    } else if let errors = result["errors"] as? NSArray {
-                        showAlert(vc: self, title: "There was an error increasing the fee.", message: "\(errors)")
-                    }
-                    return            }
-                
-                self.signedRawTx = ""
-                
-                Signer.sign(psbt: psbt, passphrase: nil) { (signedPsbt, rawTx, errorMessage) in
-                    self.spinner.removeConnectingView()
-                    
-                    self.disableBumpButton()
-                    
-                    if rawTx != nil {
-                        self.signedRawTx = rawTx!
-                        self.enableSendButton()
-                        self.disableSignButton()
-                        self.load()
-                        showAlert(vc: self, title: "Fee increased to \(newFee.avoidNotation)", message: "Tap the send button to broadcast the new transaction.")
-                        
-                    } else if signedPsbt != nil {
-                        self.unsignedPsbt = signedPsbt!
-                        self.load()
-                        showAlert(vc: self, title: "Fee increased to \(newFee.avoidNotation)", message: "The transaction still needs more signatures before it can be broadcast.")
-                        
-                    } else {
-                        showAlert(vc: self, title: "Error Signing", message: errorMessage ?? "unknown")
-                    }
-                }
-            }
-        }
-    }
+//    private func bumpFee() {
+//        spinner.addConnectingView(vc: self, description: "increasing fee...")
+//        let param_bump_fee:Bump_Fee = .init(["txid":self.txid])
+//        let param_psbt_bump_fee:PSBT_Bump_Fee = .init(["txid":self.txid])
+//        let bumpfee:BTC_CLI_COMMAND = .bumpfee(param: param_bump_fee)
+//        let psbtBumpFee:BTC_CLI_COMMAND = .psbtbumpfee(param: param_psbt_bump_fee)
+//        var command:BTC_CLI_COMMAND!
+//        command = bumpfee
+//        
+//        OnchainUtils.getWalletInfo { [weak self] (walletInfo, message) in
+//            guard let self = self else { return }
+//            
+//            guard let walletInfo = walletInfo else {
+//                self.showError(error: "Error getting wallet info: \(message ?? "unknown")")
+//                return
+//            }
+//            
+//            if let privkeysenabled = walletInfo.private_keys_enabled, !privkeysenabled,
+//                let version = UserDefaults.standard.object(forKey: "version") as? Int,
+//                version >= 210000 {
+//                command = psbtBumpFee
+//            }
+//            
+//            Reducer.sharedInstance.makeCommand(command: command) { [weak self] (response, errorMessage) in
+//                guard let self = self else { return }
+//                
+//                guard let result = response as? NSDictionary,
+//                        let originalFee = result["origfee"] as? Double,
+//                        let newFee = result["fee"] as? Double else {
+//                    self.spinner.removeConnectingView()
+//                    showAlert(vc: self, title: "There was an issue increasing the fee.", message: errorMessage ?? "unknown")
+//                    return
+//                }
+//                
+//                guard let psbt = result["psbt"] as? String else {
+//                    self.spinner.removeConnectingView()
+//                    if let txid = result["txid"] as? String {
+//                        self.saveNewTx(txid)
+//                        displayAlert(viewController: self, isError: false, message: "fee bumped from \(originalFee.avoidNotation) to \(newFee.avoidNotation)")
+//                    } else if let errors = result["errors"] as? NSArray {
+//                        showAlert(vc: self, title: "There was an error increasing the fee.", message: "\(errors)")
+//                    }
+//                    return            }
+//                
+//                self.signedRawTx = ""
+//                
+//                Signer.sign(psbt: psbt, passphrase: nil) { (signedPsbt, rawTx, errorMessage) in
+//                    self.spinner.removeConnectingView()
+//                    
+//                    self.disableBumpButton()
+//                    
+//                    if rawTx != nil {
+//                        self.signedRawTx = rawTx!
+//                        self.enableSendButton()
+//                        self.disableSignButton()
+//                        self.load()
+//                        showAlert(vc: self, title: "Fee increased to \(newFee.avoidNotation)", message: "Tap the send button to broadcast the new transaction.")
+//                        
+//                    } else if signedPsbt != nil {
+//                        self.unsignedPsbt = signedPsbt!
+//                        self.load()
+//                        showAlert(vc: self, title: "Fee increased to \(newFee.avoidNotation)", message: "The transaction still needs more signatures before it can be broadcast.")
+//                        
+//                    } else {
+//                        showAlert(vc: self, title: "Error Signing", message: errorMessage ?? "unknown")
+//                    }
+//                }
+//            }
+//        }
+//    }
     
     private func updateLabel(_ text: String) {
         DispatchQueue.main.async { [weak self] in
@@ -846,231 +802,231 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     }
     
     private func load() {
-        if !isSigning || unsignedPsbt == "" {
-            spinner.addConnectingView(vc: self, description: "getting exchange rate....")
-        } else {
-            updateLabel("reloading signed transaction...")
-        }
-        
-        inputArray.removeAll()
-        inputTableArray.removeAll()
-        outputArray.removeAll()
-        recipients.removeAll()
-        signatures.removeAll()
-        outputsString = ""
-        
-        FiatConverter.sharedInstance.getFxRate { [weak self] exchangeRate in
-            guard let self = self else { return }
-            
-            self.fxRate = exchangeRate
-            
-            
-        }
-        
-        if self.unsignedPsbt == "" {
-            self.updateLabel("decoding raw transaction...")
-            let param:Decode_Raw_Tx = .init(["hexstring":self.signedRawTx])
-            self.executeNodeCommand(method: .decoderawtransaction(param: param))
-        } else {
-            self.updateLabel("decoding psbt...")
-            let param:Decode_Psbt = .init(["psbt":self.unsignedPsbt])
-            self.executeNodeCommand(method: .decodepsbt(param: param))
-        }
+//        if !isSigning || unsignedPsbt == "" {
+//            spinner.addConnectingView(vc: self, description: "getting exchange rate....")
+//        } else {
+//            updateLabel("reloading signed transaction...")
+//        }
+//        
+//        inputArray.removeAll()
+//        inputTableArray.removeAll()
+//        outputArray.removeAll()
+//        recipients.removeAll()
+//        signatures.removeAll()
+//        outputsString = ""
+//        
+//        FiatConverter.sharedInstance.getFxRate { [weak self] exchangeRate in
+//            guard let self = self else { return }
+//            
+//            self.fxRate = exchangeRate
+//            
+//            
+//        }
+//        
+//        if self.unsignedPsbt == "" {
+//            self.updateLabel("decoding raw transaction...")
+//            let param:Decode_Raw_Tx = .init(["hexstring":self.signedRawTx])
+//            self.executeNodeCommand(method: .decoderawtransaction(param: param))
+//        } else {
+//            self.updateLabel("decoding psbt...")
+//            let param:Decode_Psbt = .init(["psbt":self.unsignedPsbt])
+//            self.executeNodeCommand(method: .decodepsbt(param: param))
+//        }
     }
     
     @objc func dismissKeyboard() {
         view.endEditing(true)
     }
     
-    func executeNodeCommand(method: BTC_CLI_COMMAND) {
-        
-        func send() {
-            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (response, errorMessage) in
-                guard let self = self else { return }
-                
-                guard let _ = response as? String else {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-                    return
-                }
-                
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.disableSendButton()
-                    self.spinner.removeConnectingView()
-                    self.navigationItem.title = "Sent ✓"
-                    displayAlert(viewController: self, isError: false, message: "Transaction sent ✓")
-                }
-            }
-        }
-        
-        func decodePsbt() {
-            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (object, errorDesc) in
-                guard let self = self else { return }
-                
-                guard let dict = object as? NSDictionary else {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorDesc ?? "")
-                    return
-                }
-                
-                self.psbtDict = dict
-                
-                if let inputs = dict["inputs"] as? NSArray, inputs.count > 0 {
-                    for (i, input) in inputs.enumerated() {
-                        var isSigned = false
-                        if let inputDict = input as? NSDictionary {
-                            if let signatures = inputDict["partial_signatures"] as? NSDictionary {
-                                for (key, value) in signatures {
-                                    self.signatures.append(["\(key)":(value as? String ?? "")])
-                                }
-                            } else if let _ = inputDict["final_scriptwitness"] as? [String] {
-                                isSigned = true
-                            }
-                            
-                            
-                        }
-                        
-                        let inputDict:[String:Any] = [
-                            "index": i + 1,
-                            "amount": "unknown",
-                            "address": "unknown",
-                            "lifehash": UIImage(),
-                            "isOurs": false,// Hardcode at this stage and update before displaying
-                            "isDust": true,
-                            "isSigned": isSigned
-                        ]
-                        
-                        self.inputTableArray.append(inputDict)
-                    }
-                }
-                
-                if let txDict = dict["tx"] as? NSDictionary {
-                    
-                    if let size = txDict["vsize"] as? Int {
-                        self.txSize = size
-                    }
-                    
-                    if let id = txDict["txid"] as? String {
-                        self.txid = id
-                        self.loadLabelAndMemo()
-                    }
-                    
-                    self.parseTransaction(tx: txDict)
-                }
-            }
-        }
-        
-        func decodeTx() {
-            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (object, errorDesc) in
-                guard let self = self else { return }
-                
-                guard let dict = object as? NSDictionary else {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorDesc ?? "")
-                    return
-                }
-                
-                if let size = dict["vsize"] as? Int {
-                    self.txSize = size
-                }
-                
-                if let id = dict["txid"] as? String {
-                    self.txid = id
-                    self.loadLabelAndMemo()
-                }
-                
-                if let inputs = dict["vin"] as? NSArray {
-                    
-                    for (i, _) in inputs.enumerated() {
-                        let inputDict:[String:Any] = [
-                            "index": i + 1,
-                            "amount": "unknown",
-                            "address": "unknown",
-                            "lifehash": UIImage(),
-                            "isOurs": false,// Hardcode at this stage and update before displaying
-                            "isDust": true,
-                            "isSigned": false
-                        ]
-                        
-                        self.inputTableArray.append(inputDict)
-                    }
-                    
-                    self.signedTxInputs = inputs
-                }
-                
-                self.parseTransaction(tx: dict)
-            }
-        }
-        
-        switch method {
-        case .sendrawtransaction:
-            send()
-            
-        case .decodepsbt:
-            decodePsbt()
-            
-        case .decoderawtransaction:
-            decodeTx()
-            
-        default:
-            break
-        }
-    }
+//    func executeNodeCommand(method: BTC_CLI_COMMAND) {
+//        
+//        func send() {
+//            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (response, errorMessage) in
+//                guard let self = self else { return }
+//                
+//                guard let _ = response as? String else {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+//                    return
+//                }
+//                
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.disableSendButton()
+//                    self.spinner.removeConnectingView()
+//                    self.navigationItem.title = "Sent ✓"
+//                    displayAlert(viewController: self, isError: false, message: "Transaction sent ✓")
+//                }
+//            }
+//        }
+//        
+//        func decodePsbt() {
+//            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (object, errorDesc) in
+//                guard let self = self else { return }
+//                
+//                guard let dict = object as? NSDictionary else {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: errorDesc ?? "")
+//                    return
+//                }
+//                
+//                self.psbtDict = dict
+//                
+//                if let inputs = dict["inputs"] as? NSArray, inputs.count > 0 {
+//                    for (i, input) in inputs.enumerated() {
+//                        var isSigned = false
+//                        if let inputDict = input as? NSDictionary {
+//                            if let signatures = inputDict["partial_signatures"] as? NSDictionary {
+//                                for (key, value) in signatures {
+//                                    self.signatures.append(["\(key)":(value as? String ?? "")])
+//                                }
+//                            } else if let _ = inputDict["final_scriptwitness"] as? [String] {
+//                                isSigned = true
+//                            }
+//                            
+//                            
+//                        }
+//                        
+//                        let inputDict:[String:Any] = [
+//                            "index": i + 1,
+//                            "amount": "unknown",
+//                            "address": "unknown",
+//                            "lifehash": UIImage(),
+//                            "isOurs": false,// Hardcode at this stage and update before displaying
+//                            "isDust": true,
+//                            "isSigned": isSigned
+//                        ]
+//                        
+//                        self.inputTableArray.append(inputDict)
+//                    }
+//                }
+//                
+//                if let txDict = dict["tx"] as? NSDictionary {
+//                    
+//                    if let size = txDict["vsize"] as? Int {
+//                        self.txSize = size
+//                    }
+//                    
+//                    if let id = txDict["txid"] as? String {
+//                        self.txid = id
+//                        self.loadLabelAndMemo()
+//                    }
+//                    
+//                    self.parseTransaction(tx: txDict)
+//                }
+//            }
+//        }
+//        
+//        func decodeTx() {
+//            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (object, errorDesc) in
+//                guard let self = self else { return }
+//                
+//                guard let dict = object as? NSDictionary else {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: errorDesc ?? "")
+//                    return
+//                }
+//                
+//                if let size = dict["vsize"] as? Int {
+//                    self.txSize = size
+//                }
+//                
+//                if let id = dict["txid"] as? String {
+//                    self.txid = id
+//                    self.loadLabelAndMemo()
+//                }
+//                
+//                if let inputs = dict["vin"] as? NSArray {
+//                    
+//                    for (i, _) in inputs.enumerated() {
+//                        let inputDict:[String:Any] = [
+//                            "index": i + 1,
+//                            "amount": "unknown",
+//                            "address": "unknown",
+//                            "lifehash": UIImage(),
+//                            "isOurs": false,// Hardcode at this stage and update before displaying
+//                            "isDust": true,
+//                            "isSigned": false
+//                        ]
+//                        
+//                        self.inputTableArray.append(inputDict)
+//                    }
+//                    
+//                    self.signedTxInputs = inputs
+//                }
+//                
+//                self.parseTransaction(tx: dict)
+//            }
+//        }
+//        
+//        switch method {
+//        case .sendrawtransaction:
+//            send()
+//            
+//        case .decodepsbt:
+//            decodePsbt()
+//            
+//        case .decoderawtransaction:
+//            decodeTx()
+//            
+//        default:
+//            break
+//        }
+//    }
     
-    func parseTransaction(tx: NSDictionary) {
-        if let inputs = tx["vin"] as? NSArray, let outputs = tx["vout"] as? NSArray {
-            parseOutputs(outputs: outputs)
-            parseInputs(inputs: inputs, completion: getFirstInputInfo)
-        }
-    }
+//    func parseTransaction(tx: NSDictionary) {
+//        if let inputs = tx["vin"] as? NSArray, let outputs = tx["vout"] as? NSArray {
+//            parseOutputs(outputs: outputs)
+//            parseInputs(inputs: inputs, completion: getFirstInputInfo)
+//        }
+//    }
     
-    func getFirstInputInfo() {
-        index = 0
-        getInputInfo(index: index)
-    }
+//    func getFirstInputInfo() {
+//        index = 0
+//        getInputInfo(index: index)
+//    }
     
-    func getInputInfo(index: Int) {
-        let dict = inputArray[index]
-        if let txid = dict["txid"] as? String, let vout = dict["vout"] as? Int {
-            if blind {
-                CoreDataService.retrieveEntity(entityName: .utxos) { [weak self] utxos in
-                    guard let self = self else { return }
-                    
-                    if let utxos = utxos, utxos.count > 0 {
-                        var parseIt = false
-                        for (i, utxo) in utxos.enumerated() {
-                            let utxoStr = Utxo(utxo)
-                            
-                            // only parse inputs for utxos we own if dealing with blind psbt
-                            if utxoStr.txid == txid, utxoStr.vout == vout, (utxoStr.solvable ?? false) {
-                                parseIt = true
-                            }
-                            
-                            if i + 1 == utxos.count && parseIt {
-                                let param:Get_Tx = .init(["txid": txid, "verbose": true])
-                                self.parsePrevTx(method: .gettransaction(param), vout: vout, txid: txid)
-                            } else if i + 1 == utxos.count && !parseIt {
-                                
-                                if index + 1 < self.inputArray.count {
-                                    self.index += 1
-                                    self.getInputInfo(index: self.index)
-                                } else {
-                                    self.parsePrevTxOutput(outputs: [], vout: 0)
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                let param:Get_Tx = .init(["txid": txid, "verbose": true])
-                parsePrevTx(method: .gettransaction(param), vout: vout, txid: txid)
-            }
-        } else if dict["txid"] as? String == "coinbase" {
-            self.parsePrevTxOutput(outputs: [], vout: 0)
-        }
-    }
+//    func getInputInfo(index: Int) {
+//        let dict = inputArray[index]
+//        if let txid = dict["txid"] as? String, let vout = dict["vout"] as? Int {
+//            if blind {
+//                CoreDataService.retrieveEntity(entityName: .utxos) { [weak self] utxos in
+//                    guard let self = self else { return }
+//                    
+//                    if let utxos = utxos, utxos.count > 0 {
+//                        var parseIt = false
+//                        for (i, utxo) in utxos.enumerated() {
+//                            let utxoStr = Utxo(utxo)
+//                            
+//                            // only parse inputs for utxos we own if dealing with blind psbt
+//                            if utxoStr.txid == txid, utxoStr.vout == vout, (utxoStr.solvable ?? false) {
+//                                parseIt = true
+//                            }
+//                            
+//                            if i + 1 == utxos.count && parseIt {
+//                                let param:Get_Tx = .init(["txid": txid, "verbose": true])
+//                                self.parsePrevTx(method: .gettransaction(param), vout: vout, txid: txid)
+//                            } else if i + 1 == utxos.count && !parseIt {
+//                                
+//                                if index + 1 < self.inputArray.count {
+//                                    self.index += 1
+//                                    self.getInputInfo(index: self.index)
+//                                } else {
+//                                    self.parsePrevTxOutput(outputs: [], vout: 0)
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            } else {
+//                let param:Get_Tx = .init(["txid": txid, "verbose": true])
+//                parsePrevTx(method: .gettransaction(param), vout: vout, txid: txid)
+//            }
+//        } else if dict["txid"] as? String == "coinbase" {
+//            self.parsePrevTxOutput(outputs: [], vout: 0)
+//        }
+//    }
     
     func parseInputs(inputs: NSArray, completion: @escaping () -> Void) {
         for (index, i) in inputs.enumerated() {
@@ -1169,307 +1125,307 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    func parsePrevTxOutput(outputs: NSArray, vout: Int) {
-        if outputs.count > 0 {
-            for o in outputs {
-                if let output = o as? NSDictionary {
-                    if let n = output["n"] as? Int {
-                        if n == vout {
-                            //this is our inputs output, we can now get the amount and address for the input (PITA)
-                            var addressString = ""
-                            
-                            if let scriptpubkey = output["scriptPubKey"] as? NSDictionary {
-                                if let addresses = scriptpubkey["addresses"] as? NSArray {
-                                    if addresses.count > 1 {
-                                        for a in addresses {
-                                            addressString += a as! String + " "
-                                        }
-                                        
-                                    } else {
-                                        addressString = addresses[0] as! String
-                                    }
-                                } else if let address = scriptpubkey["address"] as? String {
-                                    addressString = address
-                                }
-                            }
-                            
-                            if let amount = output["value"] as? Double {
-                                inputTotal += amount
-                                var amountString = amount.avoidNotation
-                                
-                                if fxRate != nil {
-                                    amountString += " btc / \(fiatAmount(btc: amount))"
-                                }
-                                
-                                self.inputTableArray[index]["amount"] = amountString
-                                self.inputTableArray[index]["address"] = addressString
-                                self.inputTableArray[index]["lifehash"] = LifeHash.image(addressString) ?? UIImage()
-                                self.inputTableArray[index]["isDust"] = amount < 0.00020000
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        if index + 1 < inputArray.count {
-            index += 1
-            getInputInfo(index: index)
-            
-        } else if index + 1 == inputArray.count {
-            index = 0
-            txFee = inputTotal - outputTotal
-            
-            if inputTotal > 0.0 {
-                let txfeeString = txFee.avoidNotation
-                if fxRate != nil {
-                    self.miningFee = "\(txfeeString) btc / \(fiatAmount(btc: self.txFee))"
-                } else {
-                    self.miningFee = "\(txfeeString) btc / error fetching fx rate"
-                }
-            } else {
-                self.miningFee = "No fee data. Your node may be pruned."
-            }
-            
-            verifyInputs()
-        }
-    }
+//    func parsePrevTxOutput(outputs: NSArray, vout: Int) {
+//        if outputs.count > 0 {
+//            for o in outputs {
+//                if let output = o as? NSDictionary {
+//                    if let n = output["n"] as? Int {
+//                        if n == vout {
+//                            //this is our inputs output, we can now get the amount and address for the input (PITA)
+//                            var addressString = ""
+//                            
+//                            if let scriptpubkey = output["scriptPubKey"] as? NSDictionary {
+//                                if let addresses = scriptpubkey["addresses"] as? NSArray {
+//                                    if addresses.count > 1 {
+//                                        for a in addresses {
+//                                            addressString += a as! String + " "
+//                                        }
+//                                        
+//                                    } else {
+//                                        addressString = addresses[0] as! String
+//                                    }
+//                                } else if let address = scriptpubkey["address"] as? String {
+//                                    addressString = address
+//                                }
+//                            }
+//                            
+//                            if let amount = output["value"] as? Double {
+//                                inputTotal += amount
+//                                var amountString = amount.avoidNotation
+//                                
+//                                if fxRate != nil {
+//                                    amountString += " btc / \(fiatAmount(btc: amount))"
+//                                }
+//                                
+//                                self.inputTableArray[index]["amount"] = amountString
+//                                self.inputTableArray[index]["address"] = addressString
+//                                self.inputTableArray[index]["lifehash"] = LifeHash.image(addressString) ?? UIImage()
+//                                self.inputTableArray[index]["isDust"] = amount < 0.00020000
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        
+//        if index + 1 < inputArray.count {
+//            index += 1
+//            //getInputInfo(index: index)
+//            
+//        } else if index + 1 == inputArray.count {
+//            index = 0
+//            txFee = inputTotal - outputTotal
+//            
+//            if inputTotal > 0.0 {
+//                let txfeeString = txFee.avoidNotation
+//                if fxRate != nil {
+//                    self.miningFee = "\(txfeeString) btc / \(fiatAmount(btc: self.txFee))"
+//                } else {
+//                    self.miningFee = "\(txfeeString) btc / error fetching fx rate"
+//                }
+//            } else {
+//                self.miningFee = "No fee data. Your node may be pruned."
+//            }
+//            
+//            verifyInputs()
+//        }
+//    }
     
-    private func verifyInputs() {
-        if index < inputTableArray.count {
-            self.updateLabel("verifying input #\(self.index + 1) out of \(self.inputTableArray.count)")
-            
-            if let address = inputTableArray[index]["address"] as? String, address != "unknown", address != "" {
-                let param:Get_Address_Info = .init(["address":address])
-                Reducer.sharedInstance.makeCommand(command: .getaddressinfo(param: param)) { [weak self] (response, errorMessage) in
-                    guard let self = self else { return }
-                    
-                    guard errorMessage == nil else {
-                        self.spinner.removeConnectingView()
-                        if errorMessage!.contains("Wallet file not specified (must request wallet RPC through") {
-                            showAlert(vc: self, title: "No wallet specified!", message: "Please go to your Active Wallet tab and toggle on a wallet then try this operation again, for certain commands Bitcoin Core needs to know which wallet to talk to.")
-                        } else {
-                            showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown")
-                        }
-                        
-                        return
-                    }
-                    
-                    if let dict = response as? NSDictionary {
-                        let solvable = dict["solvable"] as? Bool ?? false
-                        let keypath = dict["hdkeypath"] as? String ?? "no key path"
-                        let labels = dict["labels"] as? NSArray ?? ["no label"]
-                        let desc = dict["desc"] as? String ?? "no descriptor"
-                        var isChange = dict["ischange"] as? Bool ?? false
-                        let fingerprint = dict["hdmasterfingerprint"] as? String ?? "no fingerprint"
-                        let script = dict["script"] as? String ?? ""
-                        let sigsrequired = dict["sigsrequired"] as? Int ?? 0
-                        let pubkeys = dict["pubkeys"] as? [String] ?? []
-                        var labelsText = ""
-                        if labels.count > 0 {
-                            for label in labels {
-                                if label as? String == "" {
-                                    labelsText += "no label "
-                                } else {
-                                    labelsText += "\(label as? String ?? "") "
-                                }
-                            }
-                        } else {
-                            labelsText += "no label "
-                        }
-                        
-                        isChange = desc.contains("/1/")
-                        
-                        self.inputTableArray[self.index]["isOurs"] = solvable
-                        self.inputTableArray[self.index]["hdKeyPath"] = keypath
-                        self.inputTableArray[self.index]["isChange"] = isChange
-                        self.inputTableArray[self.index]["label"] = labelsText
-                        self.inputTableArray[self.index]["fingerprint"] = fingerprint
-                        self.inputTableArray[self.index]["desc"] = desc
-                        
-                        if script == "multisig" && self.signedRawTx == "" {
-                            self.inputTableArray[self.index]["sigsrequired"] = sigsrequired
-                            self.inputTableArray[self.index]["pubkeys"] = pubkeys
-                            var numberOfSigs = 0
-                            
-                            // Will only be any for a psbt
-                            for (i, sigs) in self.signatures.enumerated() {
-                                for (key, _) in sigs {
-                                    for pk in pubkeys {
-                                        if pk == key {
-                                            numberOfSigs += 1
-                                        }
-                                    }
-                                }
-                                
-                                if i + 1 == self.signatures.count {
-                                    self.inputTableArray[self.index]["signatures"] = "\(numberOfSigs) out of \(sigsrequired) signatures"
-                                }
-                                
-                            }
-                            
-                        } else {
-                            // Will only be any for a signed raw transaction
-                            if self.signedTxInputs.count > 0 {
-                                self.inputTableArray[self.index]["signatures"] = "Unsigned"
-                                let input = self.signedTxInputs[self.index] as? NSDictionary ?? [:]
-                                let scriptsig = input["scriptSig"] as? NSDictionary ?? [:]
-                                let hex = scriptsig["hex"] as? String ?? ""
-                                
-                                if hex != "" {
-                                    self.inputTableArray[self.index]["signatures"] = "Signatures complete"
-                                } else {
-                                    if let txwitness = input["txinwitness"] as? NSArray {
-                                        if txwitness.count > 0 {
-                                            self.inputTableArray[self.index]["signatures"] = "Signatures complete"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        self.index += 1
-                        self.verifyInputs()
-                    }
-                }
-            } else {
-                self.index += 1
-                self.verifyInputs()
-            }
-        } else {
-            self.index = 0
-            verifyOutputs()
-        }
-    }
+//    private func verifyInputs() {
+//        if index < inputTableArray.count {
+//            self.updateLabel("verifying input #\(self.index + 1) out of \(self.inputTableArray.count)")
+//            
+//            if let address = inputTableArray[index]["address"] as? String, address != "unknown", address != "" {
+//                let param:Get_Address_Info = .init(["address":address])
+//                Reducer.sharedInstance.makeCommand(command: .getaddressinfo(param: param)) { [weak self] (response, errorMessage) in
+//                    guard let self = self else { return }
+//                    
+//                    guard errorMessage == nil else {
+//                        self.spinner.removeConnectingView()
+//                        if errorMessage!.contains("Wallet file not specified (must request wallet RPC through") {
+//                            showAlert(vc: self, title: "No wallet specified!", message: "Please go to your Active Wallet tab and toggle on a wallet then try this operation again, for certain commands Bitcoin Core needs to know which wallet to talk to.")
+//                        } else {
+//                            showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown")
+//                        }
+//                        
+//                        return
+//                    }
+//                    
+//                    if let dict = response as? NSDictionary {
+//                        let solvable = dict["solvable"] as? Bool ?? false
+//                        let keypath = dict["hdkeypath"] as? String ?? "no key path"
+//                        let labels = dict["labels"] as? NSArray ?? ["no label"]
+//                        let desc = dict["desc"] as? String ?? "no descriptor"
+//                        var isChange = dict["ischange"] as? Bool ?? false
+//                        let fingerprint = dict["hdmasterfingerprint"] as? String ?? "no fingerprint"
+//                        let script = dict["script"] as? String ?? ""
+//                        let sigsrequired = dict["sigsrequired"] as? Int ?? 0
+//                        let pubkeys = dict["pubkeys"] as? [String] ?? []
+//                        var labelsText = ""
+//                        if labels.count > 0 {
+//                            for label in labels {
+//                                if label as? String == "" {
+//                                    labelsText += "no label "
+//                                } else {
+//                                    labelsText += "\(label as? String ?? "") "
+//                                }
+//                            }
+//                        } else {
+//                            labelsText += "no label "
+//                        }
+//                        
+//                        isChange = desc.contains("/1/")
+//                        
+//                        self.inputTableArray[self.index]["isOurs"] = solvable
+//                        self.inputTableArray[self.index]["hdKeyPath"] = keypath
+//                        self.inputTableArray[self.index]["isChange"] = isChange
+//                        self.inputTableArray[self.index]["label"] = labelsText
+//                        self.inputTableArray[self.index]["fingerprint"] = fingerprint
+//                        self.inputTableArray[self.index]["desc"] = desc
+//                        
+//                        if script == "multisig" && self.signedRawTx == "" {
+//                            self.inputTableArray[self.index]["sigsrequired"] = sigsrequired
+//                            self.inputTableArray[self.index]["pubkeys"] = pubkeys
+//                            var numberOfSigs = 0
+//                            
+//                            // Will only be any for a psbt
+//                            for (i, sigs) in self.signatures.enumerated() {
+//                                for (key, _) in sigs {
+//                                    for pk in pubkeys {
+//                                        if pk == key {
+//                                            numberOfSigs += 1
+//                                        }
+//                                    }
+//                                }
+//                                
+//                                if i + 1 == self.signatures.count {
+//                                    self.inputTableArray[self.index]["signatures"] = "\(numberOfSigs) out of \(sigsrequired) signatures"
+//                                }
+//                                
+//                            }
+//                            
+//                        } else {
+//                            // Will only be any for a signed raw transaction
+//                            if self.signedTxInputs.count > 0 {
+//                                self.inputTableArray[self.index]["signatures"] = "Unsigned"
+//                                let input = self.signedTxInputs[self.index] as? NSDictionary ?? [:]
+//                                let scriptsig = input["scriptSig"] as? NSDictionary ?? [:]
+//                                let hex = scriptsig["hex"] as? String ?? ""
+//                                
+//                                if hex != "" {
+//                                    self.inputTableArray[self.index]["signatures"] = "Signatures complete"
+//                                } else {
+//                                    if let txwitness = input["txinwitness"] as? NSArray {
+//                                        if txwitness.count > 0 {
+//                                            self.inputTableArray[self.index]["signatures"] = "Signatures complete"
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                        self.index += 1
+//                        self.verifyInputs()
+//                    }
+//                }
+//            } else {
+//                self.index += 1
+//                self.verifyInputs()
+//            }
+//        } else {
+//            self.index = 0
+//            //verifyOutputs()
+//        }
+//    }
     
-    private func verifyOutputs() {
-        if index < outputArray.count {
-            self.updateLabel("verifying output #\(self.index + 1) out of \(self.outputArray.count)")
-            
-            if let address = outputArray[index]["address"] as? String, address != "" {
-                let param:Get_Address_Info = .init(["address":address])
-                Reducer.sharedInstance.makeCommand(command: .getaddressinfo(param: param)) { [weak self] (response, errorMessage) in
-                    guard let self = self else { return }
-                    
-                    if let dict = response as? NSDictionary {
-                        let solvable = dict["solvable"] as? Bool ?? false
-                        var keypath = dict["hdkeypath"] as? String ?? "no key path"
-                        let labels = dict["labels"] as? NSArray ?? ["no label"]
-                        let desc = dict["desc"] as? String ?? "no descriptor"
-                        var isChange = dict["ischange"] as? Bool ?? false
-                        let fingerprint = dict["hdmasterfingerprint"] as? String ?? "no fingerprint"
-                        var labelsText = ""
-                        
-                        if labels.count > 0 {
-                            for label in labels {
-                                if label as? String == "" {
-                                    labelsText += "no label "
-                                } else {
-                                    labelsText += "\(label as? String ?? "") "
-                                }
-                            }
-                        } else {
-                            labelsText += "no label "
-                        }
-                        
-                        if desc.contains("/1/") {
-                            isChange = true
-                        }
-                        
-                        if keypath == "no key path" {
-                            let descriptorStr = Descriptor(desc)
-                            keypath = descriptorStr.derivation
-                        }
-                        
-                        self.outputArray[self.index]["isOursBitcoind"] = solvable
-                        self.outputArray[self.index]["hdKeyPath"] = keypath
-                        self.outputArray[self.index]["isChange"] = isChange
-                        self.outputArray[self.index]["label"] = labelsText
-                        self.outputArray[self.index]["fingerprint"] = fingerprint
-                        self.outputArray[self.index]["desc"] = desc
-                        
-                        // Currently only verify address if the node knows about it.. otherwise we have to brute force 200k addresses...
-                        // will add a dedicated verify button for unsolvable to cross check against all wallets
-                        // also adding a signer verify button to show whether FN is able to sign for the output or not
-                        if solvable && self.wallet != nil {
-                            // Only do this if we are not using the default wallet.
-                            Keys.verifyAddress(address, keypath, desc) { (isOursFullyNoded, walletLabel, signable, signer) in
-                                self.outputArray[self.index]["isOursFullyNoded"] = isOursFullyNoded
-                                self.outputArray[self.index]["walletLabel"] = walletLabel
-                                self.outputArray[self.index]["signable"] = signable
-                                self.outputArray[self.index]["signerLabel"] = signer
-                                self.index += 1
-                                self.verifyOutputs()
-                            }
-                        } else {
-                            self.outputArray[self.index]["isOursFullyNoded"] = false
-                            self.outputArray[self.index]["walletLabel"] = ""
-                            self.index += 1
-                            self.verifyOutputs()
-                        }
-                    }
-                }
-            } else {
-                self.index += 1
-                self.verifyOutputs()
-            }
-        } else {
-            guard signedRawTx != "" else {
-                getFeeRate()
-                return
-            }
-            
-            if !alreadyBroadcast {
-                updateLabel("verifying mempool accept...")
-                let param:Test_Mempool_Accept = .init(["rawtxs":[signedRawTx]])
-                Reducer.sharedInstance.makeCommand(command: .testmempoolaccept(param)) { [weak self] (response, errorMessage) in
-                    guard let self = self else { return }
-                    
-                    if let errorMessage = errorMessage {
-                        showAlert(vc: self, title: "testmempoolaccept error", message: errorMessage)
-                    }
-                    
-                    guard let arr = response as? NSArray, arr.count > 0,
-                        let dict = arr[0] as? NSDictionary,
-                        let allowed = dict["allowed"] as? Bool else {
-                        self.getFeeRate()
-                        return
-                    }
-                    
-                    self.txValid = allowed
-                    
-                    if allowed {
-                        self.enableSendButton()
-                        self.disableSignButton()
-                    }
-                    
-                    self.rejectionMessage = dict["reject-reason"] as? String ?? ""
-                    self.getFeeRate()
-                }
-            } else {
-                self.getFeeRate()
-            }
-        }
-    }
+//    private func verifyOutputs() {
+//        if index < outputArray.count {
+//            self.updateLabel("verifying output #\(self.index + 1) out of \(self.outputArray.count)")
+//            
+//            if let address = outputArray[index]["address"] as? String, address != "" {
+//                let param:Get_Address_Info = .init(["address":address])
+//                Reducer.sharedInstance.makeCommand(command: .getaddressinfo(param: param)) { [weak self] (response, errorMessage) in
+//                    guard let self = self else { return }
+//                    
+//                    if let dict = response as? NSDictionary {
+//                        let solvable = dict["solvable"] as? Bool ?? false
+//                        var keypath = dict["hdkeypath"] as? String ?? "no key path"
+//                        let labels = dict["labels"] as? NSArray ?? ["no label"]
+//                        let desc = dict["desc"] as? String ?? "no descriptor"
+//                        var isChange = dict["ischange"] as? Bool ?? false
+//                        let fingerprint = dict["hdmasterfingerprint"] as? String ?? "no fingerprint"
+//                        var labelsText = ""
+//                        
+//                        if labels.count > 0 {
+//                            for label in labels {
+//                                if label as? String == "" {
+//                                    labelsText += "no label "
+//                                } else {
+//                                    labelsText += "\(label as? String ?? "") "
+//                                }
+//                            }
+//                        } else {
+//                            labelsText += "no label "
+//                        }
+//                        
+//                        if desc.contains("/1/") {
+//                            isChange = true
+//                        }
+//                        
+//                        if keypath == "no key path" {
+//                            let descriptorStr = Descriptor(desc)
+//                            keypath = descriptorStr.derivation
+//                        }
+//                        
+//                        self.outputArray[self.index]["isOursBitcoind"] = solvable
+//                        self.outputArray[self.index]["hdKeyPath"] = keypath
+//                        self.outputArray[self.index]["isChange"] = isChange
+//                        self.outputArray[self.index]["label"] = labelsText
+//                        self.outputArray[self.index]["fingerprint"] = fingerprint
+//                        self.outputArray[self.index]["desc"] = desc
+//                        
+//                        // Currently only verify address if the node knows about it.. otherwise we have to brute force 200k addresses...
+//                        // will add a dedicated verify button for unsolvable to cross check against all wallets
+//                        // also adding a signer verify button to show whether FN is able to sign for the output or not
+//                        if solvable && self.wallet != nil {
+//                            // Only do this if we are not using the default wallet.
+//                            Keys.verifyAddress(address, keypath, desc) { (isOursFullyNoded, walletLabel, signable, signer) in
+//                                self.outputArray[self.index]["isOursFullyNoded"] = isOursFullyNoded
+//                                self.outputArray[self.index]["walletLabel"] = walletLabel
+//                                self.outputArray[self.index]["signable"] = signable
+//                                self.outputArray[self.index]["signerLabel"] = signer
+//                                self.index += 1
+//                                self.verifyOutputs()
+//                            }
+//                        } else {
+//                            self.outputArray[self.index]["isOursFullyNoded"] = false
+//                            self.outputArray[self.index]["walletLabel"] = ""
+//                            self.index += 1
+//                            self.verifyOutputs()
+//                        }
+//                    }
+//                }
+//            } else {
+//                self.index += 1
+//                self.verifyOutputs()
+//            }
+//        } else {
+//            guard signedRawTx != "" else {
+//                getFeeRate()
+//                return
+//            }
+//            
+//            if !alreadyBroadcast {
+//                updateLabel("verifying mempool accept...")
+//                let param:Test_Mempool_Accept = .init(["rawtxs":[signedRawTx]])
+//                Reducer.sharedInstance.makeCommand(command: .testmempoolaccept(param)) { [weak self] (response, errorMessage) in
+//                    guard let self = self else { return }
+//                    
+//                    if let errorMessage = errorMessage {
+//                        showAlert(vc: self, title: "testmempoolaccept error", message: errorMessage)
+//                    }
+//                    
+//                    guard let arr = response as? NSArray, arr.count > 0,
+//                        let dict = arr[0] as? NSDictionary,
+//                        let allowed = dict["allowed"] as? Bool else {
+//                        self.getFeeRate()
+//                        return
+//                    }
+//                    
+//                    self.txValid = allowed
+//                    
+//                    if allowed {
+//                        self.enableSendButton()
+//                        self.disableSignButton()
+//                    }
+//                    
+//                    self.rejectionMessage = dict["reject-reason"] as? String ?? ""
+//                    self.getFeeRate()
+//                }
+//            } else {
+//                self.getFeeRate()
+//            }
+//        }
+//    }
     
-    private func getFeeRate() {
-        let target = UserDefaults.standard.object(forKey: "feeTarget") as? Int ?? 432
-        
-        updateLabel("estimating smart fee...")
-        let param:Estimate_Smart_Fee_Param = .init(["conf_target": target])
-        
-        Reducer.sharedInstance.makeCommand(command: .estimatesmartfee(param: param)) { [weak self] (response, errorMessage) in
-            guard let self = self else { return }
-            
-            guard let dict = response as? NSDictionary, let feeRate = dict["feerate"] as? Double else {
-                self.loadTableData()
-                return
-            }
-            
-            let inSatsPerKb = Double(feeRate) * 100000000.0
-            self.smartFee = inSatsPerKb / 1000.0
-            self.loadTableData()
-        }
-    }
+//    private func getFeeRate() {
+//        let target = UserDefaults.standard.object(forKey: "feeTarget") as? Int ?? 432
+//        
+//        updateLabel("estimating smart fee...")
+//        let param:Estimate_Smart_Fee_Param = .init(["conf_target": target])
+//        
+//        Reducer.sharedInstance.makeCommand(command: .estimatesmartfee(param: param)) { [weak self] (response, errorMessage) in
+//            guard let self = self else { return }
+//            
+//            guard let dict = response as? NSDictionary, let feeRate = dict["feerate"] as? Double else {
+//                self.loadTableData()
+//                return
+//            }
+//            
+//            let inSatsPerKb = Double(feeRate) * 100000000.0
+//            self.smartFee = inSatsPerKb / 1000.0
+//            self.loadTableData()
+//        }
+//    }
     
     private func fiatAmount(btc: Double) -> String {
         guard let fxRate = fxRate else { return "error getting fiat rate" }
@@ -1491,126 +1447,126 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    func parsePrevTx(method: BTC_CLI_COMMAND, vout: Int, txid: String) {
-        func decodeRaw() {
-            updateLabel("decoding inputs previous output...")
-            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (object, errorDescription) in
-                guard let self = self else { return }
-                
-                guard let txDict = object as? NSDictionary, let outputs = txDict["vout"] as? NSArray else {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: "Error decoding raw transaction")
-                    return
-                }
-                
-                self.parsePrevTxOutput(outputs: outputs, vout: vout)
-            }
-        }
-        
-//        func checkEsplora(txid: String) {
-//            guard let useEsplora = UserDefaults.standard.object(forKey: "useEsplora") as? Bool, useEsplora else {
-//                if UserDefaults.standard.object(forKey: "useEsplora") == nil && UserDefaults.standard.object(forKey: "useEsploraAlert") == nil {
-//                    showAlert(vc: self, title: "Unable to fetch input.", message: "Pruned nodes can not lookup input details for inputs that are associated with transactions which are not owned by the active wallet. In order to see inputs in detail you can enable Esplora (Blockstream's block explorer) over Tor in \"Settings\".")
-//
-//                    UserDefaults.standard.setValue(true, forKey: "useEsploraAlert")
-//                }
-//
-//                self.parsePrevTxOutput(outputs: [], vout: 0)
-//                return
-//            }
-//
-//            self.updateLabel("fetching inputs previous output with Esplora...")
-//
-//            let fetcher = GetTx.sharedInstance
-//            fetcher.fetch(txid: txid) { [weak self] rawHex in
+//    func parsePrevTx(method: BTC_CLI_COMMAND, vout: Int, txid: String) {
+//        func decodeRaw() {
+//            updateLabel("decoding inputs previous output...")
+//            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (object, errorDescription) in
 //                guard let self = self else { return }
-//
-//                guard let rawHex = rawHex else {
-//                    // Esplora must be down, pass an empty array instead
+//                
+//                guard let txDict = object as? NSDictionary, let outputs = txDict["vout"] as? NSArray else {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: "Error decoding raw transaction")
+//                    return
+//                }
+//                
+//                self.parsePrevTxOutput(outputs: outputs, vout: vout)
+//            }
+//        }
+//        
+////        func checkEsplora(txid: String) {
+////            guard let useEsplora = UserDefaults.standard.object(forKey: "useEsplora") as? Bool, useEsplora else {
+////                if UserDefaults.standard.object(forKey: "useEsplora") == nil && UserDefaults.standard.object(forKey: "useEsploraAlert") == nil {
+////                    showAlert(vc: self, title: "Unable to fetch input.", message: "Pruned nodes can not lookup input details for inputs that are associated with transactions which are not owned by the active wallet. In order to see inputs in detail you can enable Esplora (Blockstream's block explorer) over Tor in \"Settings\".")
+////
+////                    UserDefaults.standard.setValue(true, forKey: "useEsploraAlert")
+////                }
+////
+////                self.parsePrevTxOutput(outputs: [], vout: 0)
+////                return
+////            }
+////
+////            self.updateLabel("fetching inputs previous output with Esplora...")
+////
+////            let fetcher = GetTx.sharedInstance
+////            fetcher.fetch(txid: txid) { [weak self] rawHex in
+////                guard let self = self else { return }
+////
+////                guard let rawHex = rawHex else {
+////                    // Esplora must be down, pass an empty array instead
+////                    self.parsePrevTxOutput(outputs: [], vout: 0)
+////                    return
+////                }
+////                let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":rawHex])
+////                self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
+////            }
+////            return
+////        }
+//        
+//        func getRawTx() {
+//            updateLabel("fetching inputs previous output...")
+//            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (response, errorMessage) in
+//                guard let self = self else { return }
+//                guard let response = response as? [String:Any] else {
 //                    self.parsePrevTxOutput(outputs: [], vout: 0)
 //                    return
 //                }
-//                let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":rawHex])
+//                
+//                guard let hex = response["hex"] as? String else {
+//                    guard let errorMessage = errorMessage else { return }
+//                    
+//                    guard errorMessage.contains("No such mempool transaction") else {
+//                        self.spinner.removeConnectingView()
+//                        displayAlert(viewController: self, isError: true, message: "Error parsing inputs: \(errorMessage)")
+//                        return
+//                    }
+//                    
+//                    let param_get_tx:Get_Tx = .init(["txid":txid, "verbose": true])
+//                    Reducer.sharedInstance.makeCommand(command: .gettransaction(param_get_tx)) { (response, errorMessage) in
+//                        guard let dict = response as? NSDictionary, let hexToParse = dict["hex"] as? String else {
+////                            guard let useEsplora = UserDefaults.standard.object(forKey: "useEsplora") as? Bool, useEsplora else {
+////                                if UserDefaults.standard.object(forKey: "useEsplora") == nil && UserDefaults.standard.object(forKey: "useEsploraAlert") == nil {
+////                                    showAlert(vc: self, title: "Unable to fetch input.", message: "Pruned nodes can not lookup input details for inputs that are associated with transactions which are not owned by the active wallet. In order to see inputs in detail you can enable Esplora (Blockstream's block explorer) over Tor in \"Settings\".")
+////
+////                                    UserDefaults.standard.setValue(true, forKey: "useEsploraAlert")
+////                                }
+////
+////                                self.parsePrevTxOutput(outputs: [], vout: 0)
+////                                return
+////                            }
+////
+////                            self.updateLabel("fetching inputs previous output with Esplora...")
+////
+////                            let fetcher = GetTx.sharedInstance
+////                            fetcher.fetch(txid: txid) { [weak self] rawHex in
+////                                guard let self = self else { return }
+////
+////                                guard let rawHex = rawHex else {
+////                                    // Esplora must be down, pass an empty array instead
+////                                    self.parsePrevTxOutput(outputs: [], vout: 0)
+////                                    return
+////                                }
+////                                let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":rawHex])
+////                                self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
+////                            }
+////                            return
+//                            //checkEsplora(txid: txid)
+//                            self.parsePrevTxOutput(outputs: [], vout: 0)
+//                            return
+//                        }
+//                        
+//                        let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":hexToParse])
+//                        self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
+//                    }
+//                    
+//                    return
+//                }
+//                let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":hex])
 //                self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
 //            }
-//            return
 //        }
-        
-        func getRawTx() {
-            updateLabel("fetching inputs previous output...")
-            Reducer.sharedInstance.makeCommand(command: method) { [weak self] (response, errorMessage) in
-                guard let self = self else { return }
-                guard let response = response as? [String:Any] else {
-                    self.parsePrevTxOutput(outputs: [], vout: 0)
-                    return
-                }
-                
-                guard let hex = response["hex"] as? String else {
-                    guard let errorMessage = errorMessage else { return }
-                    
-                    guard errorMessage.contains("No such mempool transaction") else {
-                        self.spinner.removeConnectingView()
-                        displayAlert(viewController: self, isError: true, message: "Error parsing inputs: \(errorMessage)")
-                        return
-                    }
-                    
-                    let param_get_tx:Get_Tx = .init(["txid":txid, "verbose": true])
-                    Reducer.sharedInstance.makeCommand(command: .gettransaction(param_get_tx)) { (response, errorMessage) in
-                        guard let dict = response as? NSDictionary, let hexToParse = dict["hex"] as? String else {
-//                            guard let useEsplora = UserDefaults.standard.object(forKey: "useEsplora") as? Bool, useEsplora else {
-//                                if UserDefaults.standard.object(forKey: "useEsplora") == nil && UserDefaults.standard.object(forKey: "useEsploraAlert") == nil {
-//                                    showAlert(vc: self, title: "Unable to fetch input.", message: "Pruned nodes can not lookup input details for inputs that are associated with transactions which are not owned by the active wallet. In order to see inputs in detail you can enable Esplora (Blockstream's block explorer) over Tor in \"Settings\".")
-//
-//                                    UserDefaults.standard.setValue(true, forKey: "useEsploraAlert")
-//                                }
-//
-//                                self.parsePrevTxOutput(outputs: [], vout: 0)
-//                                return
-//                            }
-//
-//                            self.updateLabel("fetching inputs previous output with Esplora...")
-//
-//                            let fetcher = GetTx.sharedInstance
-//                            fetcher.fetch(txid: txid) { [weak self] rawHex in
-//                                guard let self = self else { return }
-//
-//                                guard let rawHex = rawHex else {
-//                                    // Esplora must be down, pass an empty array instead
-//                                    self.parsePrevTxOutput(outputs: [], vout: 0)
-//                                    return
-//                                }
-//                                let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":rawHex])
-//                                self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
-//                            }
-//                            return
-                            //checkEsplora(txid: txid)
-                            self.parsePrevTxOutput(outputs: [], vout: 0)
-                            return
-                        }
-                        
-                        let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":hexToParse])
-                        self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
-                    }
-                    
-                    return
-                }
-                let param_decode_raw:Decode_Raw_Tx = .init(["hexstring":hex])
-                self.parsePrevTx(method: .decoderawtransaction(param: param_decode_raw), vout: vout, txid: txid)
-            }
-        }
-        
-        switch method {
-        case .decoderawtransaction:
-            decodeRaw()
-            
-        case .gettransaction:
-            getRawTx()
-            
-        default:
-            break
-        }
-        
-    }
+//        
+//        switch method {
+//        case .decoderawtransaction:
+//            decodeRaw()
+//            
+//        case .gettransaction:
+//            getRawTx()
+//            
+//        default:
+//            break
+//        }
+//        
+//    }
     
     private func defaultCell(_ indexPath: IndexPath) -> UITableViewCell {
         let cell = verifyTable.dequeueReusableCell(withIdentifier: "defaultCell", for: indexPath)
@@ -2114,7 +2070,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             
             alert.addAction(UIAlertAction(title: "Verify Owner", style: .default, handler: { action in
                 self.spinner.addConnectingView(vc: self, description: "checking other FN wallets...")
-                self.getBitcoinCoreWallets(address, index)
+                //self.getBitcoinCoreWallets(address, index)
             }))
             
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
@@ -2123,147 +2079,147 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    private func checkEachWallet(_ address: String, _ walletsToCheck: [String], _ int: Int) {
-        var updatedOutput = outputArray[int]
-        
-        func resetActiveWallet() {
-            UserDefaults.standard.set(self.wallet!.name, forKey: "walletName")
-        }
-        
-        if walletIndex < walletsToCheck.count {
-            let wallet = walletsToCheck[walletIndex]
-            UserDefaults.standard.set(wallet, forKey: "walletName")
-            let param:Get_Address_Info = .init(["address":address])
-            Reducer.sharedInstance.makeCommand(command: .getaddressinfo(param: param)) { [weak self] (response, errorMessage) in
-                guard let self = self else { resetActiveWallet(); return }
-                
-                if let dict = response as? NSDictionary, let solvable = dict["solvable"] as? Bool, solvable {
-                    let keypath = dict["hdkeypath"] as? String ?? "no key path"
-                    let labels = dict["labels"] as? NSArray ?? ["no label"]
-                    let desc = dict["desc"] as? String ?? "no descriptor"
-                    var isChange = dict["ischange"] as? Bool ?? false
-                    let fingerprint = dict["hdmasterfingerprint"] as? String ?? "no fingerprint"
-                    var labelsText = ""
-                    
-                    if labels.count > 0 {
-                        for label in labels {
-                            if label as? String == "" {
-                                labelsText += "no label "
-                            } else {
-                                labelsText += "\(label as? String ?? "") "
-                            }
-                        }
-                    } else {
-                        labelsText += "no label "
-                    }
-                    
-                    if desc.contains("/1/") {
-                        isChange = true
-                    }
-                    updatedOutput["isOursBitcoind"] = solvable
-                    updatedOutput["hdKeyPath"] = keypath
-                    updatedOutput["isChange"] = isChange
-                    updatedOutput["label"] = labelsText
-                    updatedOutput["fingerprint"] = fingerprint
-                    updatedOutput["desc"] = desc
-                    
-                    // Currently only verify address if the node knows about it.. otherwise we have to brute force 200k addresses...
-                    // will add a dedicated verify button for unsolvable to cross check against all wallets
-                    // also adding a signer verify button to show whether FN is able to sign for the output or not
-                    
-                    Keys.verifyAddress(address, keypath, desc) {(isOursFullyNoded, walletLabel, signable, signer) in
-                        updatedOutput["isOursFullyNoded"] = isOursFullyNoded
-                        updatedOutput["walletLabel"] = walletLabel
-                        updatedOutput["signable"] = signable
-                        updatedOutput["signerLabel"] = signer
-                        
-                        DispatchQueue.main.async { [weak self] in
-                            guard let self = self else { return }
-                            
-                            resetActiveWallet()
-                            self.outputArray[int] = updatedOutput
-                            self.verifyTable.reloadData()
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "", message: "Owned by \(walletLabel ?? "Bitcoin Core") ✓")
-                        }
-                        
-                        return
-                    }
-                } else {
-                    self.walletIndex += 1
-                    self.checkEachWallet(address, walletsToCheck, int)
-                }
-            }
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                resetActiveWallet()
-                self.verifyTable.reloadData()
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "", message: "Address not owned by any of the FN Wallets associated with this node.")
-            }
-        }
-    }
+//    private func checkEachWallet(_ address: String, _ walletsToCheck: [String], _ int: Int) {
+//        var updatedOutput = outputArray[int]
+//        
+//        func resetActiveWallet() {
+//            UserDefaults.standard.set(self.wallet!.name, forKey: "walletName")
+//        }
+//        
+//        if walletIndex < walletsToCheck.count {
+//            let wallet = walletsToCheck[walletIndex]
+//            UserDefaults.standard.set(wallet, forKey: "walletName")
+//            let param:Get_Address_Info = .init(["address":address])
+//            Reducer.sharedInstance.makeCommand(command: .getaddressinfo(param: param)) { [weak self] (response, errorMessage) in
+//                guard let self = self else { resetActiveWallet(); return }
+//                
+//                if let dict = response as? NSDictionary, let solvable = dict["solvable"] as? Bool, solvable {
+//                    let keypath = dict["hdkeypath"] as? String ?? "no key path"
+//                    let labels = dict["labels"] as? NSArray ?? ["no label"]
+//                    let desc = dict["desc"] as? String ?? "no descriptor"
+//                    var isChange = dict["ischange"] as? Bool ?? false
+//                    let fingerprint = dict["hdmasterfingerprint"] as? String ?? "no fingerprint"
+//                    var labelsText = ""
+//                    
+//                    if labels.count > 0 {
+//                        for label in labels {
+//                            if label as? String == "" {
+//                                labelsText += "no label "
+//                            } else {
+//                                labelsText += "\(label as? String ?? "") "
+//                            }
+//                        }
+//                    } else {
+//                        labelsText += "no label "
+//                    }
+//                    
+//                    if desc.contains("/1/") {
+//                        isChange = true
+//                    }
+//                    updatedOutput["isOursBitcoind"] = solvable
+//                    updatedOutput["hdKeyPath"] = keypath
+//                    updatedOutput["isChange"] = isChange
+//                    updatedOutput["label"] = labelsText
+//                    updatedOutput["fingerprint"] = fingerprint
+//                    updatedOutput["desc"] = desc
+//                    
+//                    // Currently only verify address if the node knows about it.. otherwise we have to brute force 200k addresses...
+//                    // will add a dedicated verify button for unsolvable to cross check against all wallets
+//                    // also adding a signer verify button to show whether FN is able to sign for the output or not
+//                    
+//                    Keys.verifyAddress(address, keypath, desc) {(isOursFullyNoded, walletLabel, signable, signer) in
+//                        updatedOutput["isOursFullyNoded"] = isOursFullyNoded
+//                        updatedOutput["walletLabel"] = walletLabel
+//                        updatedOutput["signable"] = signable
+//                        updatedOutput["signerLabel"] = signer
+//                        
+//                        DispatchQueue.main.async { [weak self] in
+//                            guard let self = self else { return }
+//                            
+//                            resetActiveWallet()
+//                            self.outputArray[int] = updatedOutput
+//                            self.verifyTable.reloadData()
+//                            self.spinner.removeConnectingView()
+//                            showAlert(vc: self, title: "", message: "Owned by \(walletLabel ?? "Bitcoin Core") ✓")
+//                        }
+//                        
+//                        return
+//                    }
+//                } else {
+//                    self.walletIndex += 1
+//                    self.checkEachWallet(address, walletsToCheck, int)
+//                }
+//            }
+//        } else {
+//            DispatchQueue.main.async { [weak self] in
+//                guard let self = self else { return }
+//                
+//                resetActiveWallet()
+//                self.verifyTable.reloadData()
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "", message: "Address not owned by any of the FN Wallets associated with this node.")
+//            }
+//        }
+//    }
     
-    private func getFullyNodedWallets(_ address: String,_ int: Int) {
-        var walletsToCheck = [String]()
-        CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
-            guard let self = self else { return }
-            
-            guard let wallets = wallets, wallets.count > 0, let activeWallet = self.wallet else { return }
-            
-            for (i, wallet) in wallets.enumerated() {
-                if wallet["id"] != nil {
-                    let walletStruct = Wallet(dictionary: wallet)
-                    
-                    if activeWallet.id != walletStruct.id {
-                        for (b, bitcoinCoreWallet) in self.bitcoinCoreWallets.enumerated() {
-                            if bitcoinCoreWallet == walletStruct.name {
-                                walletsToCheck.append(walletStruct.name)
-                            }
-                            if b + 1 == self.bitcoinCoreWallets.count {
-                                if i + 1 == wallets.count {
-                                    self.checkEachWallet(address, walletsToCheck, int)
-                                }
-                            }
-                        }
-                    } else if i + 1 == wallets.count {
-                        self.checkEachWallet(address, walletsToCheck, int)
-                    }
-                }
-            }
-        }
-    }
+//    private func getFullyNodedWallets(_ address: String,_ int: Int) {
+//        var walletsToCheck = [String]()
+//        CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
+//            guard let self = self else { return }
+//            
+//            guard let wallets = wallets, wallets.count > 0, let activeWallet = self.wallet else { return }
+//            
+//            for (i, wallet) in wallets.enumerated() {
+//                if wallet["id"] != nil {
+//                    let walletStruct = Wallet(dictionary: wallet)
+//                    
+//                    if activeWallet.id != walletStruct.id {
+//                        for (b, bitcoinCoreWallet) in self.bitcoinCoreWallets.enumerated() {
+//                            if bitcoinCoreWallet == walletStruct.name {
+//                                walletsToCheck.append(walletStruct.name)
+//                            }
+//                            if b + 1 == self.bitcoinCoreWallets.count {
+//                                if i + 1 == wallets.count {
+//                                    //self.checkEachWallet(address, walletsToCheck, int)
+//                                }
+//                            }
+//                        }
+//                    } else if i + 1 == wallets.count {
+//                        self.checkEachWallet(address, walletsToCheck, int)
+//                    }
+//                }
+//            }
+//        }
+//    }
     
-    func getBitcoinCoreWallets(_ address: String, _ int: Int) {
-        bitcoinCoreWallets.removeAll()
-        OnchainUtils.listWalletDir { [weak self] (walletDir, message) in
-            guard let self = self else { return }
-            
-            guard let walletDir = walletDir else {
-                DispatchQueue.main.async {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: "error getting wallets: \(message ?? "")")
-                }
-                return
-            }
-            
-            self.parseWallets(walletDir.wallets, address, int)
-        }
-    }
+//    func getBitcoinCoreWallets(_ address: String, _ int: Int) {
+//        bitcoinCoreWallets.removeAll()
+//        OnchainUtils.listWalletDir { [weak self] (walletDir, message) in
+//            guard let self = self else { return }
+//            
+//            guard let walletDir = walletDir else {
+//                DispatchQueue.main.async {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: "error getting wallets: \(message ?? "")")
+//                }
+//                return
+//            }
+//            
+//            self.parseWallets(walletDir.wallets, address, int)
+//        }
+//    }
     
-    private func parseWallets(_ wallets: [String], _ address: String, _ int: Int) {
-        guard !wallets.isEmpty else { return }
-        
-        for (i, walletName) in wallets.enumerated() {
-            bitcoinCoreWallets.append(walletName)
-            
-            if i + 1 == wallets.count {
-                getFullyNodedWallets(address, int)
-            }
-        }
-    }
+//    private func parseWallets(_ wallets: [String], _ address: String, _ int: Int) {
+//        guard !wallets.isEmpty else { return }
+//        
+//        for (i, walletName) in wallets.enumerated() {
+//            bitcoinCoreWallets.append(walletName)
+//            
+//            if i + 1 == wallets.count {
+//                getFullyNodedWallets(address, int)
+//            }
+//        }
+//    }
     
     @objc func copyAddress(_ sender: UIButton) {
         UIPasteboard.general.string = sender.restorationIdentifier
@@ -2395,48 +2351,48 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    private func broadcastWithMyNode() {
-        spinner.addConnectingView(vc: self, description: "broadcasting...")
-        let paramDict:[String:Any] = ["hexstring":self.signedRawTx]
-        let param:Send_Raw_Transaction = .init(paramDict)
-        Reducer.sharedInstance.makeCommand(command: .sendrawtransaction(param)) { [weak self] (response, errorMesage) in
-            guard let self = self else { return }
-            
-            guard let id = response as? String else {
-                self.showError(error: "Error broadcasting: \(errorMesage ?? "unknown error")")
-                return
-            }
-            
-            DispatchQueue.main.async {
-                if self.txid == id {
-                    NotificationCenter.default.post(name: .refreshWallet, object: nil, userInfo: nil)
-                    self.disableSendButton()
-                    self.spinner.removeConnectingView()
-                    //showAlert(vc: self, title: "", message: "Transaction sent ✓")
-                    // should pop back to wallet view
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        
-                        let alert = UIAlertController(title: "Transaction sent ✓",
-                                                      message: "",
-                                                      preferredStyle: .alert)
-                        
-                        alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { [weak self] action in
-                            self?.navigationController?.popToRootViewController(animated: true)
-                        }))
-//                        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [weak self] action in
+//    private func broadcastWithMyNode() {
+//        spinner.addConnectingView(vc: self, description: "broadcasting...")
+//        let paramDict:[String:Any] = ["hexstring":self.signedRawTx]
+//        let param:Send_Raw_Transaction = .init(paramDict)
+//        Reducer.sharedInstance.makeCommand(command: .sendrawtransaction(param)) { [weak self] (response, errorMesage) in
+//            guard let self = self else { return }
+//            
+//            guard let id = response as? String else {
+//                self.showError(error: "Error broadcasting: \(errorMesage ?? "unknown error")")
+//                return
+//            }
+//            
+//            DispatchQueue.main.async {
+//                if self.txid == id {
+//                    NotificationCenter.default.post(name: .refreshWallet, object: nil, userInfo: nil)
+//                    self.disableSendButton()
+//                    self.spinner.removeConnectingView()
+//                    //showAlert(vc: self, title: "", message: "Transaction sent ✓")
+//                    // should pop back to wallet view
+//                    DispatchQueue.main.async { [weak self] in
+//                        guard let self = self else { return }
+//                        
+//                        let alert = UIAlertController(title: "Transaction sent ✓",
+//                                                      message: "",
+//                                                      preferredStyle: .alert)
+//                        
+//                        alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { [weak self] action in
 //                            self?.navigationController?.popToRootViewController(animated: true)
 //                        }))
-                        alert.popoverPresentationController?.sourceView = self.view
-                        self.present(alert, animated: true) {}
-                    }
-                } else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "Hmmm we got a strange response...", message: id)
-                }
-            }
-        }
-    }
+////                        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [weak self] action in
+////                            self?.navigationController?.popToRootViewController(animated: true)
+////                        }))
+//                        alert.popoverPresentationController?.sourceView = self.view
+//                        self.present(alert, animated: true) {}
+//                    }
+//                } else {
+//                    self.spinner.removeConnectingView()
+//                    showAlert(vc: self, title: "Hmmm we got a strange response...", message: id)
+//                }
+//            }
+//        }
+//    }
     
     private func broadcast() {
         DispatchQueue.main.async { [weak self] in
@@ -2447,7 +2403,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                                           preferredStyle: .alert)
             
             alert.addAction(UIAlertAction(title: "Send", style: .default, handler: { action in
-                self.broadcastWithMyNode()
+                //self.broadcastWithMyNode()
             }))
             
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
@@ -2796,70 +2752,70 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
         }
     }
     
-    private func prompToAddBlindPsbt(_ blindPsbt: Data) {
-        func loadNormally() {
-            guard let decryptedPsbt = Crypto.decryptPsbt(blindPsbt) else {
-                showAlert(vc: self, title: "", message: "Error decrypting psbt.")
-                return
-            }
-            
-            self.isSigning = false
-            self.unsignedPsbt = decryptedPsbt.base64EncodedString()
-            processPsbt(unsignedPsbt)
-        }
+//    private func prompToAddBlindPsbt(_ blindPsbt: Data) {
+//        func loadNormally() {
+//            guard let decryptedPsbt = Crypto.decryptPsbt(blindPsbt) else {
+//                showAlert(vc: self, title: "", message: "Error decrypting psbt.")
+//                return
+//            }
+//            
+//            self.isSigning = false
+//            self.unsignedPsbt = decryptedPsbt.base64EncodedString()
+//            processPsbt(unsignedPsbt)
+//        }
+//        
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            
+//            let alert = UIAlertController(title: "Add inputs and outputs to the psbt?",
+//                                          message: "Fully Noded will add inputs and outputs from your active wallet to this transaction. Everyones inputs and outputs will be shuffled. This helps to break common heuristics companies may use to track your utxos and/or payments.",
+//                                          preferredStyle: .alert)
+//            
+//            alert.addAction(UIAlertAction(title: "Join", style: .default, handler: { [weak self] action in
+//                guard let self = self else { return }
+//                
+//                self.spinner.label.text = "adding our inputs and outputs..."
+//                self.addBlindPsbt(blindPsbt)
+//            }))
+//            
+//            alert.addAction(UIAlertAction(title: "Not now", style: .default, handler: { action in
+//                loadNormally()
+//            }))
+//            
+//            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in
+//                loadNormally()
+//            }))
+//            
+//            alert.popoverPresentationController?.sourceView = self.view
+//            self.present(alert, animated: true) {}
+//        }
+//    }
         
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let alert = UIAlertController(title: "Add inputs and outputs to the psbt?",
-                                          message: "Fully Noded will add inputs and outputs from your active wallet to this transaction. Everyones inputs and outputs will be shuffled. This helps to break common heuristics companies may use to track your utxos and/or payments.",
-                                          preferredStyle: .alert)
-            
-            alert.addAction(UIAlertAction(title: "Join", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.spinner.label.text = "adding our inputs and outputs..."
-                self.addBlindPsbt(blindPsbt)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Not now", style: .default, handler: { action in
-                loadNormally()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in
-                loadNormally()
-            }))
-            
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true) {}
-        }
-    }
-        
-    private func parseBlindPsbt(_ blindPsbt: String) {
-        spinner.addConnectingView(vc: self, description: "")
-        
-        guard let ur = URHelper.ur(blindPsbt), let encryptedData = URHelper.bytesToData(ur) else {
-            spinner.removeConnectingView()
-            showAlert(vc: self, title: "", message: "Error converting blind psbt to data.")
-            return
-        }
-        
-        prompToAddBlindPsbt(encryptedData)
-    }
+//    private func parseBlindPsbt(_ blindPsbt: String) {
+//        spinner.addConnectingView(vc: self, description: "")
+//        
+//        guard let ur = URHelper.ur(blindPsbt), let encryptedData = URHelper.bytesToData(ur) else {
+//            spinner.removeConnectingView()
+//            showAlert(vc: self, title: "", message: "Error converting blind psbt to data.")
+//            return
+//        }
+//        
+//        prompToAddBlindPsbt(encryptedData)
+//    }
     
-    private func addBlindPsbt(_ blindPsbt: Data) {
-        BlindPsbt.parseBlindPsbt(blindPsbt) { [weak self] (joinedPsbt, error) in
-            guard let self = self else { return }
-                        
-            guard let joinedPsbt = joinedPsbt else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error getting joined psbt.", message: "\(error ?? "unknown error")")
-                return
-            }
-            
-            self.processPsbt(joinedPsbt)
-        }
-    }
+//    private func addBlindPsbt(_ blindPsbt: Data) {
+//        BlindPsbt.parseBlindPsbt(blindPsbt) { [weak self] (joinedPsbt, error) in
+//            guard let self = self else { return }
+//                        
+//            guard let joinedPsbt = joinedPsbt else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "Error getting joined psbt.", message: "\(error ?? "unknown error")")
+//                return
+//            }
+//            
+//            self.processPsbt(joinedPsbt)
+//        }
+//    }
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
@@ -2948,8 +2904,8 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                         }
                         
                         guard let psbt = URHelper.bytesToData(ur) else {
-                            self.blind = true
-                            self.parseBlindPsbt(tx)
+                            //self.blind = true
+                            //self.parseBlindPsbt(tx)
                             
                             return
                         }

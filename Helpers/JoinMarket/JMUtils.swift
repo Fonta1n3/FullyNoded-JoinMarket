@@ -83,59 +83,59 @@ class JMUtils {
                 "label": "Join Market"
             ]
             
-            CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
-                guard success else {
-                    completion((nil, nil, nil, "Unable to save the signer."))
-                    return
-                }
-                
-                let (mk, xfp, block) = getMkXfpBlock(signer: signer)
-                guard let mk = mk, let xfp = xfp, let block = block else { return }
-                
-                let fnWalletId = UUID()
-                
-                JoinMarket.descriptors(mk, xfp) { descriptors in
-                    guard let descriptors = descriptors else {
-                        completion((nil, nil, nil, "Error creating your jm descriptors."))
-                        return
-                    }
-                    
-                    var fnWallet:[String:Any] = [
-                        "receiveDescriptor":descriptors[0],
-                        "changeDescriptor":descriptors[1],
-                        "blockheight": block,
-                        "watching":Array(descriptors[2...descriptors.count - 1]),
-                        "label":"Join Market",
-                        "index": Int64(0),
-                        "maxIndex": 100,
-                        "type": "Single-Sig",
-                        "isJm": true,
-                        "id": fnWalletId,
-                        "token":encryptedToken,
-                        "password": encryptedPass,
-                        "jmWalletName": jmWalletName,
-                        "name": ""
-                    ]
-                    
-                    JMUtils.configGet(wallet: Wallet(dictionary: fnWallet), section: "BLOCKCHAIN", field: "rpc_wallet_file") { (jm_rpc_wallet, message) in
-                        guard let jm_rpc_wallet = jm_rpc_wallet else {
-                            completion((nil, nil, nil, message ?? "error fetching Bitcoin Core rpc wallet name in jm config."))
-                            return
-                        }
-                        
-                        fnWallet["name"] = jm_rpc_wallet
-                        
-                        CoreDataService.saveEntity(dict: fnWallet, entityName: .wallets) { fnWalletSaved in
-                            guard fnWalletSaved else {
-                                completion((nil, nil, nil, "Error saving fn wallet."))
-                                return
-                            }
-                            
-                            completion((Wallet(dictionary: fnWallet), signer, password, nil))
-                        }
-                    }
-                }
-            }
+//            CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
+//                guard success else {
+//                    completion((nil, nil, nil, "Unable to save the signer."))
+//                    return
+//                }
+//                
+//                let (mk, xfp, block) = getMkXfpBlock(signer: signer)
+//                guard let mk = mk, let xfp = xfp, let block = block else { return }
+//                
+//                let fnWalletId = UUID()
+//                
+//                JoinMarket.descriptors(mk, xfp) { descriptors in
+//                    guard let descriptors = descriptors else {
+//                        completion((nil, nil, nil, "Error creating your jm descriptors."))
+//                        return
+//                    }
+//                    
+//                    var fnWallet:[String:Any] = [
+//                        "receiveDescriptor":descriptors[0],
+//                        "changeDescriptor":descriptors[1],
+//                        "blockheight": block,
+//                        "watching":Array(descriptors[2...descriptors.count - 1]),
+//                        "label":"Join Market",
+//                        "index": Int64(0),
+//                        "maxIndex": 100,
+//                        "type": "Single-Sig",
+//                        "isJm": true,
+//                        "id": fnWalletId,
+//                        "token":encryptedToken,
+//                        "password": encryptedPass,
+//                        "jmWalletName": jmWalletName,
+//                        "name": ""
+//                    ]
+//                    
+//                    JMUtils.configGet(wallet: Wallet(dictionary: fnWallet), section: "BLOCKCHAIN", field: "rpc_wallet_file") { (jm_rpc_wallet, message) in
+//                        guard let jm_rpc_wallet = jm_rpc_wallet else {
+//                            completion((nil, nil, nil, message ?? "error fetching Bitcoin Core rpc wallet name in jm config."))
+//                            return
+//                        }
+//                        
+//                        fnWallet["name"] = jm_rpc_wallet
+//                        
+//                        CoreDataService.saveEntity(dict: fnWallet, entityName: .wallets) { fnWalletSaved in
+//                            guard fnWalletSaved else {
+//                                completion((nil, nil, nil, "Error saving fn wallet."))
+//                                return
+//                            }
+//                            
+//                            completion((Wallet(dictionary: fnWallet), signer, password, nil))
+//                        }
+//                    }
+//                }
+//            }
         }
     }
     

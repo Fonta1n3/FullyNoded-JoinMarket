@@ -102,7 +102,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Save changes in the application's managed object context when the application transitions to the background.
         (UIApplication.shared.delegate as? AppDelegate)?.saveContext()
         
-        MakeRPCCall.sharedInstance.connected = false
         
         if mgr?.state != .stopped && mgr?.state != TorClient.TorState.none  {
             if #available(iOS 14.0, *) {
@@ -182,7 +181,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             let descriptor = "wsh([\(origin)]\(xpub)/0/*)"
             let cosigner = Descriptor(descriptor)
             
-            presentMultisigCreator(cosigner: cosigner)
+            //presentMultisigCreator(cosigner: cosigner)
             
         } else if let _ = dict["chain"] as? String {
             presentWalletCreator(coldCard: dict)
@@ -227,26 +226,26 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
     
-    private func presentMultisigCreator(cosigner: Descriptor) {
-        let storyBoard = UIStoryboard(name: "Main", bundle: nil)
-        
-        guard let multisigCreator = storyBoard.instantiateViewController(identifier: "MultisigCreator") as? CreateMultisigViewController,
-            let window = self.window,
-            let rootViewController = window.rootViewController else {
-            return
-        }
-        
-        multisigCreator.cosigner = cosigner
-        
-        var currentController = rootViewController
-        
-        while let presentedController = currentController.presentedViewController {
-            currentController = presentedController
-        }
-        
-        multisigCreator.modalPresentationStyle = .fullScreen
-        currentController.present(multisigCreator, animated: true, completion: nil)
-    }
+//    private func presentMultisigCreator(cosigner: Descriptor) {
+//        let storyBoard = UIStoryboard(name: "Main", bundle: nil)
+//        
+//        guard let multisigCreator = storyBoard.instantiateViewController(identifier: "MultisigCreator") as? CreateMultisigViewController,
+//            let window = self.window,
+//            let rootViewController = window.rootViewController else {
+//            return
+//        }
+//        
+//        multisigCreator.cosigner = cosigner
+//        
+//        var currentController = rootViewController
+//        
+//        while let presentedController = currentController.presentedViewController {
+//            currentController = presentedController
+//        }
+//        
+//        multisigCreator.modalPresentationStyle = .fullScreen
+//        currentController.present(multisigCreator, animated: true, completion: nil)
+//    }
     
     private func presentWalletCreator(coldCard: [String:Any]) {
         guard let tabBarController = self.window!.rootViewController as? UITabBarController else { return }

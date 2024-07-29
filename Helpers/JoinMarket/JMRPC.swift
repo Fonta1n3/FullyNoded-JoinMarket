@@ -59,13 +59,10 @@ class JMRPC {
             }
             
             var onionAddress:String?
-            var sesh = URLSession(configuration: .default)
+            let sesh = self.torClient.session
             
             if let encAddress = node.onionAddress {
                 onionAddress = decryptedValue(encAddress)
-                if onionAddress!.contains("onion") {
-                    sesh = self.torClient.session
-                }
             }
             
             if let encryptedCert = node.cert {
@@ -78,8 +75,8 @@ class JMRPC {
             }
             
             let walletUrl = "https://\(onionAddress ?? "localhost")/\(method.stringValue)"
-                        
-             guard let url = URL(string: walletUrl) else {
+            
+            guard let url = URL(string: walletUrl) else {
                 completion((nil, "url error"))
                 return
             }
@@ -104,9 +101,9 @@ class JMRPC {
                 
                 guard let decryptedToken = Crypto.decrypt(wallet.token!),
                       let token = decryptedToken.utf8String else {
-                          completion((nil, "Unable to decrypt token."))
-                          return
-                      }
+                    completion((nil, "Unable to decrypt token."))
+                    return
+                }
                 self.token = token
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 
@@ -116,10 +113,10 @@ class JMRPC {
                 
                 guard let decryptedPassword = Crypto.decrypt(wallet.password!),
                       let password = decryptedPassword.utf8String else {
-                          completion((nil, "Unable to decrypt password."))
-                          return
-                      }
-                                
+                    completion((nil, "Unable to decrypt password."))
+                    return
+                }
+                
                 paramToUse = ["password":password]
                 
             case .walletcreate:
@@ -137,9 +134,9 @@ class JMRPC {
                 
                 guard let decryptedToken = Crypto.decrypt(wallet.token!),
                       let token = decryptedToken.utf8String else {
-                          completion((nil, "Unable to decrypt token."))
-                          return
-                      }
+                    completion((nil, "Unable to decrypt token."))
+                    return
+                }
                 self.token = token
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 
@@ -148,9 +145,9 @@ class JMRPC {
                 
                 guard let decryptedToken = Crypto.decrypt(wallet.token!),
                       let token = decryptedToken.utf8String else {
-                          completion((nil, "Unable to decrypt token."))
-                          return
-                      }
+                    completion((nil, "Unable to decrypt token."))
+                    return
+                }
                 self.token = token
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
@@ -169,92 +166,74 @@ class JMRPC {
             request.httpMethod = httpMethod
             request.url = url
             
-//            #if DEBUG
-//            print("url = \(url)")
-//            print("httpMethod = \(httpMethod)")
-//            print("self.token = \(self.token)")
-//            print("httpBody = \(paramToUse)")
-//            #endif
+#if DEBUG
+            print("url = \(url)")
+            print("httpMethod = \(httpMethod)")
+            print("self.token = \(self.token)")
+            print("httpBody = \(paramToUse)")
+#endif
             
-            if self.isNostr {
-                MakeRPCCall.sharedInstance.executeNostrJmRpc(method: method,
-                                                             httpMethod: httpMethod,
-                                                             token: self.token,
-                                                             httpBody: paramToUse)
-                self.token = nil
-                request.httpBody = nil
-
-                StreamManager.shared.onDoneBlock = { jmResponse in
-                    guard let response = jmResponse.response as? [String:Any] else { completion((nil, jmResponse.errorDesc)); return }
+            
+            let task = sesh.dataTask(with: request as URLRequest) { [weak self] (data, response, error) in
+                guard let self = self else { return }
+                
+                guard let urlContent = data else {
                     
-                    guard let message = response["message"] as? String else {
-                        completion((response, nil))
-                        return
-                    }
-                    completion((nil, message))
-                }
-            } else {
-                let task = sesh.dataTask(with: request as URLRequest) { [weak self] (data, response, error) in
-                    guard let self = self else { return }
-
-                    guard let urlContent = data else {
-
-                        guard let error = error else {
-                            if self.attempts < 20 {
-                                self.command(method: method, param: param, completion: completion)
-                            } else {
-                                self.attempts = 0
-                                completion((nil, "Unknown error, ran out of attempts"))
-                            }
-
-                            return
-                        }
-
+                    guard let error = error else {
                         if self.attempts < 20 {
                             self.command(method: method, param: param, completion: completion)
                         } else {
                             self.attempts = 0
-                            #if DEBUG
-                            print("error: \(error.localizedDescription)")
-                            #endif
-                            completion((nil, error.localizedDescription))
+                            completion((nil, "Unknown error, ran out of attempts"))
                         }
-
+                        
                         return
                     }
-
-                    self.attempts = 0
-
-                    guard let json = try? JSONSerialization.jsonObject(with: urlContent, options: .mutableLeaves) as? NSDictionary else {
-                        if let httpResponse = response as? HTTPURLResponse {
-                            switch httpResponse.statusCode {
-                            case 401:
-                                completion((nil, "Looks like your rpc credentials are incorrect, please double check them. If you changed your rpc creds in your bitcoin.conf you need to restart your node for the changes to take effect."))
-                            case 403:
-                                completion((nil, "The bitcoin-cli \(method) command has not been added to your rpcwhitelist, add \(method) to your bitcoin.conf rpcwhitelsist, reboot Bitcoin Core and try again."))
-                            default:
-                                completion((nil, "Unable to decode the response from your node, http status code: \(httpResponse.statusCode)"))
-                            }
-                        } else {
-                            completion((nil, "Unable to decode the response from your node..."))
-                        }
-                        return
+                    
+                    if self.attempts < 20 {
+                        self.command(method: method, param: param, completion: completion)
+                    } else {
+                        self.attempts = 0
+#if DEBUG
+                        print("error: \(error.localizedDescription)")
+#endif
+                        completion((nil, error.localizedDescription))
                     }
-
-                    #if DEBUG
-                    print("json: \(json)")
-                    #endif
-
-                    guard let message = json["message"] as? String else {
-                        completion((json, nil))
-                        return
-                    }
-
-                    completion((nil, message))
+                    
+                    return
                 }
                 
-                task.resume()
+                self.attempts = 0
+                
+                guard let json = try? JSONSerialization.jsonObject(with: urlContent, options: .mutableLeaves) as? NSDictionary else {
+                    if let httpResponse = response as? HTTPURLResponse {
+                        switch httpResponse.statusCode {
+                        case 401:
+                            completion((nil, "Looks like your rpc credentials are incorrect, please double check them. If you changed your rpc creds in your bitcoin.conf you need to restart your node for the changes to take effect."))
+                        case 403:
+                            completion((nil, "The bitcoin-cli \(method) command has not been added to your rpcwhitelist, add \(method) to your bitcoin.conf rpcwhitelsist, reboot Bitcoin Core and try again."))
+                        default:
+                            completion((nil, "Unable to decode the response from your node, http status code: \(httpResponse.statusCode)"))
+                        }
+                    } else {
+                        completion((nil, "Unable to decode the response from your node..."))
+                    }
+                    return
+                }
+                
+#if DEBUG
+                print("json: \(json)")
+#endif
+                
+                guard let message = json["message"] as? String else {
+                    completion((json, nil))
+                    return
+                }
+                
+                completion((nil, message))
             }
+            
+            task.resume()
         }
     }
 }

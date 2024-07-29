@@ -709,18 +709,18 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             if let _ = accountMap["descriptor"] as? String {
                 if (accountMap["blockheight"] as? Int) != nil || (accountMap["blockheight"] as? Int64) != nil {
                     /// It is an Account Map.
-                    ImportWallet.accountMap(accountMap) { (success, errorDescription) in
-                        if success {
-                            DispatchQueue.main.async {
-                                self.spinner.removeConnectingView()
-                                self.onDoneBlock!(true)
-                                self.navigationController?.popViewController(animated: true)
-                            }
-                        } else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "Error", message: "There was an error importing your wallet: \(errorDescription ?? "unknown")")
-                        }
-                    }
+//                    ImportWallet.accountMap(accountMap) { (success, errorDescription) in
+//                        if success {
+//                            DispatchQueue.main.async {
+//                                self.spinner.removeConnectingView()
+//                                self.onDoneBlock!(true)
+//                                self.navigationController?.popViewController(animated: true)
+//                            }
+//                        } else {
+//                            self.spinner.removeConnectingView()
+//                            showAlert(vc: self, title: "Error", message: "There was an error importing your wallet: \(errorDescription ?? "unknown")")
+//                        }
+//                    }
                 }
             } else if let _ = accountMap["ExtPubKey"] as? String {
                 spinner.removeConnectingView()
@@ -893,54 +893,54 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             }
             
             let dict = ["id":UUID(), "words":encryptedSigner, "added": Date()] as [String:Any]
-            CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
-                guard success else {
-                    return
-                }
-                
-                guard let descriptors = descriptors else {
-                    showAlert(vc: self, title: "Unable to derive descriptors...", message: "Please let us know about this issue. Error: \(message ?? "unknown.")")
-                    return
-                }
-                
-                self.prompToChoosePrimaryDesc(descriptors: descriptors)
-            }
+//            CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
+//                guard success else {
+//                    return
+//                }
+//                
+//                guard let descriptors = descriptors else {
+//                    showAlert(vc: self, title: "Unable to derive descriptors...", message: "Please let us know about this issue. Error: \(message ?? "unknown.")")
+//                    return
+//                }
+//                
+//                self.prompToChoosePrimaryDesc(descriptors: descriptors)
+//            }
             
-        } else if let coldcardSparrowExport = try? jsonDecoder.decode(ColdcardSparrowExport.self, from: item.utf8) {
-            // Need to edit the desc slightly to work with Descriptor.swift
-            // Sparrow is using the following format for cosigner
-            //"wsh(sortedmulti(M,[0f056943/48h/1h/0h/2h]tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP/0/*,...))"
+//        } else if let coldcardSparrowExport = try? jsonDecoder.decode(ColdcardSparrowExport.self, from: item.utf8) {
+//            // Need to edit the desc slightly to work with Descriptor.swift
+//            // Sparrow is using the following format for cosigner
+//            //"wsh(sortedmulti(M,[0f056943/48h/1h/0h/2h]tpubDF2rnouQaaYrXF4noGTv6rQYmx87cQ4GrUdhpvXkhtChwQPbdGTi8GA88NUaSrwZBwNsTkC9bFkkC8vDyGBVVAQTZ2AS6gs68RQXtXcCvkP/0/*,...))"
+//            
+//            if let _ = coldcardSparrowExport.chain {
+//                var descriptors:[String] = []
+//                
+//                if let bip44 = coldcardSparrowExport.bip44, let desc = bip44.standardDesc {
+//                    descriptors.append(desc)
+//                }
+//                
+//                if let bip49 = coldcardSparrowExport.bip49, let desc = bip49.standardDesc {
+//                    descriptors.append(desc)
+//                }
+//                
+//                if let bip84 = coldcardSparrowExport.bip84, let desc = bip84.standardDesc {
+//                    descriptors.append(desc)
+//                }
+//                
+//                if let bip482 = coldcardSparrowExport.bip48_2, var desc = bip482.standardDesc {
+//                    descriptors.append(desc)
+//                }
+//                
+//                self.prompToChoosePrimaryDesc(descriptors: descriptors)
+//            }
             
-            if let _ = coldcardSparrowExport.chain {
-                var descriptors:[String] = []
-                
-                if let bip44 = coldcardSparrowExport.bip44, let desc = bip44.standardDesc {
-                    descriptors.append(desc)
-                }
-                
-                if let bip49 = coldcardSparrowExport.bip49, let desc = bip49.standardDesc {
-                    descriptors.append(desc)
-                }
-                
-                if let bip84 = coldcardSparrowExport.bip84, let desc = bip84.standardDesc {
-                    descriptors.append(desc)
-                }
-                
-                if let bip482 = coldcardSparrowExport.bip48_2, var desc = bip482.standardDesc {
-                    descriptors.append(desc)
-                }
-                
-                self.prompToChoosePrimaryDesc(descriptors: descriptors)
-            }
-            
-        } else if let coldcardMultisigExport = try? jsonDecoder.decode(ColdcardMultiSigExport.self, from: item.utf8) {
-            guard let deriv = coldcardMultisigExport.p2wsh_deriv else { return }
-            guard let xfp = coldcardMultisigExport.xfp else { return }
-            guard let p2wsh = coldcardMultisigExport.p2wsh else { return}
-            guard let xpub = XpubConverter.convert(extendedKey: p2wsh) else { return }
-            let origin = deriv.replacingOccurrences(of: "m", with: xfp)
-            let descriptor = "wsh([\(origin)]\(xpub)/0/*)"
-            promptToImportColdcardMsig(Descriptor(descriptor))
+//        } else if let coldcardMultisigExport = try? jsonDecoder.decode(ColdcardMultiSigExport.self, from: item.utf8) {
+//            guard let deriv = coldcardMultisigExport.p2wsh_deriv else { return }
+//            guard let xfp = coldcardMultisigExport.xfp else { return }
+//            guard let p2wsh = coldcardMultisigExport.p2wsh else { return}
+//            guard let xpub = XpubConverter.convert(extendedKey: p2wsh) else { return }
+//            let origin = deriv.replacingOccurrences(of: "m", with: xfp)
+//            let descriptor = "wsh([\(origin)]\(xpub)/0/*)"
+//            promptToImportColdcardMsig(Descriptor(descriptor))
             
             
         } else if let dict = try? JSONSerialization.jsonObject(with: item.utf8, options: []) as? [String:Any] {
@@ -990,15 +990,9 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                 }
             }
             
-        case "segueToCreateMultiSig":
-            guard let vc = segue.destination as? CreateMultisigViewController else { fallthrough }
+       
             
-            vc.cosigner = cosigner
-            
-        case "segueToImportDescriptor":
-            guard let vc = segue.destination as? ImportXpubViewController else { fallthrough }
-            
-            vc.descriptor = descriptor
+       
             
         default:
             break

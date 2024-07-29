@@ -38,61 +38,61 @@ class SignersViewController: UIViewController, UITableViewDelegate, UITableViewD
     
     private func loadData() {
         signers.removeAll()
-        CoreDataService.retrieveEntity(entityName: .signers) { [weak self] encryptedSigners in
-            guard let self = self else { return }
-            
-            guard let encryptedSigners = encryptedSigners else {
-                self.reload()
-                return
-            }
-            
-            self.signers = encryptedSigners
-            self.reload()
-            
-            guard encryptedSigners.count > 0 else { return }
-            
-            for encryptedSigner in encryptedSigners {
-                let signerStruct = SignerStruct(dictionary: encryptedSigner)
-                
-                var passphrase = ""
-                
-                if let encryptedPassphrase = signerStruct.passphrase,
-                   let decryptedPassphrase = Crypto.decrypt(encryptedPassphrase),
-                   let string = decryptedPassphrase.utf8String {
-                    passphrase = string
-                }
-                
-                // Only fires off if account xpubs had not been saved before.
-                if let encryptedWords = signerStruct.words,
-                   let decryptedSigner = Crypto.decrypt(encryptedWords),
-                   signerStruct.rootTpub == nil,
-                   let words = decryptedSigner.utf8String,
-                   let mkMain = Keys.masterKey(words: words, coinType: "0", passphrase: passphrase),
-                   let xfp = Keys.fingerprint(masterKey: mkMain),
-                   let encryptedXfp = Crypto.encrypt(xfp.utf8),
-                   let mkTest = Keys.masterKey(words: words, coinType: "1", passphrase: passphrase),
-                   let bip84xpub = Keys.bip84AccountXpub(masterKey: mkMain, coinType: "0", account: 0),
-                   let bip84tpub = Keys.bip84AccountXpub(masterKey: mkTest, coinType: "1", account: 0),
-                   let bip48xpub = Keys.xpub(path: "m/48'/0'/0'/2'", masterKey: mkMain),
-                   let bip48tpub = Keys.xpub(path: "m/48'/1'/0'/2'", masterKey: mkTest),
-                   let rootTpub = Keys.xpub(path: "m", masterKey: mkTest),
-                   let rootXpub = Keys.xpub(path: "m", masterKey: mkMain),
-                   let encryptedRootTpub = Crypto.encrypt(rootTpub.utf8),
-                   let encryptedRootXpub = Crypto.encrypt(rootXpub.utf8),
-                   let encryptedbip84xpub = Crypto.encrypt(bip84xpub.utf8),
-                   let encryptedbip84tpub = Crypto.encrypt(bip84tpub.utf8),
-                   let encryptedbip48xpub = Crypto.encrypt(bip48xpub.utf8),
-                   let encryptedbip48tpub = Crypto.encrypt(bip48tpub.utf8) {
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip84xpub", newValue: encryptedbip84xpub, entity: .signers) { _ in }
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip84tpub", newValue: encryptedbip84tpub, entity: .signers) { _ in }
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip48xpub", newValue: encryptedbip48xpub, entity: .signers) { _ in }
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip48tpub", newValue: encryptedbip48tpub, entity: .signers) { _ in }
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "xfp", newValue: encryptedXfp, entity: .signers) { _ in }
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "rootTpub", newValue: encryptedRootTpub, entity: .signers) { _ in }
-                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "rootXpub", newValue: encryptedRootXpub, entity: .signers) { _ in }
-                }
-            }
-        }
+//        CoreDataService.retrieveEntity(entityName: .signers) { [weak self] encryptedSigners in
+//            guard let self = self else { return }
+//            
+//            guard let encryptedSigners = encryptedSigners else {
+//                self.reload()
+//                return
+//            }
+//            
+//            self.signers = encryptedSigners
+//            self.reload()
+//            
+//            guard encryptedSigners.count > 0 else { return }
+//            
+//            for encryptedSigner in encryptedSigners {
+//                let signerStruct = SignerStruct(dictionary: encryptedSigner)
+//                
+//                var passphrase = ""
+//                
+//                if let encryptedPassphrase = signerStruct.passphrase,
+//                   let decryptedPassphrase = Crypto.decrypt(encryptedPassphrase),
+//                   let string = decryptedPassphrase.utf8String {
+//                    passphrase = string
+//                }
+//                
+//                // Only fires off if account xpubs had not been saved before.
+//                if let encryptedWords = signerStruct.words,
+//                   let decryptedSigner = Crypto.decrypt(encryptedWords),
+//                   signerStruct.rootTpub == nil,
+//                   let words = decryptedSigner.utf8String,
+//                   let mkMain = Keys.masterKey(words: words, coinType: "0", passphrase: passphrase),
+//                   let xfp = Keys.fingerprint(masterKey: mkMain),
+//                   let encryptedXfp = Crypto.encrypt(xfp.utf8),
+//                   let mkTest = Keys.masterKey(words: words, coinType: "1", passphrase: passphrase),
+//                   let bip84xpub = Keys.bip84AccountXpub(masterKey: mkMain, coinType: "0", account: 0),
+//                   let bip84tpub = Keys.bip84AccountXpub(masterKey: mkTest, coinType: "1", account: 0),
+//                   let bip48xpub = Keys.xpub(path: "m/48'/0'/0'/2'", masterKey: mkMain),
+//                   let bip48tpub = Keys.xpub(path: "m/48'/1'/0'/2'", masterKey: mkTest),
+//                   let rootTpub = Keys.xpub(path: "m", masterKey: mkTest),
+//                   let rootXpub = Keys.xpub(path: "m", masterKey: mkMain),
+//                   let encryptedRootTpub = Crypto.encrypt(rootTpub.utf8),
+//                   let encryptedRootXpub = Crypto.encrypt(rootXpub.utf8),
+//                   let encryptedbip84xpub = Crypto.encrypt(bip84xpub.utf8),
+//                   let encryptedbip84tpub = Crypto.encrypt(bip84tpub.utf8),
+//                   let encryptedbip48xpub = Crypto.encrypt(bip48xpub.utf8),
+//                   let encryptedbip48tpub = Crypto.encrypt(bip48tpub.utf8) {
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip84xpub", newValue: encryptedbip84xpub, entity: .signers) { _ in }
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip84tpub", newValue: encryptedbip84tpub, entity: .signers) { _ in }
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip48xpub", newValue: encryptedbip48xpub, entity: .signers) { _ in }
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "bip48tpub", newValue: encryptedbip48tpub, entity: .signers) { _ in }
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "xfp", newValue: encryptedXfp, entity: .signers) { _ in }
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "rootTpub", newValue: encryptedRootTpub, entity: .signers) { _ in }
+//                    CoreDataService.update(id: signerStruct.id, keyToUpdate: "rootXpub", newValue: encryptedRootXpub, entity: .signers) { _ in }
+//                }
+//            }
+//        }
     }
     
     private func reload() {

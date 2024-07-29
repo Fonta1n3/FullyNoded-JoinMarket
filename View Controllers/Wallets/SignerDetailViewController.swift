@@ -179,31 +179,31 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     }
     
     private func deleteNow() {
-        CoreDataService.deleteEntity(id: id, entityName: .signers) { [unowned vc = self] success in
-            if success {
-                DispatchQueue.main.async { [unowned vc = self] in
-                    vc.navigationController?.popViewController(animated: true)
-                }
-            } else {
-                showAlert(vc: vc, title: "Error", message: "We had an error deleting your wallet.")
-            }
-        }
+//        CoreDataService.deleteEntity(id: id, entityName: .signers) { [unowned vc = self] success in
+//            if success {
+//                DispatchQueue.main.async { [unowned vc = self] in
+//                    vc.navigationController?.popViewController(animated: true)
+//                }
+//            } else {
+//                showAlert(vc: vc, title: "Error", message: "We had an error deleting your wallet.")
+//            }
+//        }
     }
     
     private func getData() {
-        CoreDataService.retrieveEntity(entityName: .signers) { [weak self] signers in
-            guard let self = self else { return }
-            
-            guard let signers = signers, signers.count > 0, self.id != nil else { return }
-            
-            for signer in signers {
-                let signerStruct = SignerStruct(dictionary: signer)
-                if signerStruct.id == self.id {
-                    self.signer = signerStruct
-                    self.setFields(signerStruct)
-                }
-            }
-        }
+//        CoreDataService.retrieveEntity(entityName: .signers) { [weak self] signers in
+//            guard let self = self else { return }
+//            
+//            guard let signers = signers, signers.count > 0, self.id != nil else { return }
+//            
+//            for signer in signers {
+//                let signerStruct = SignerStruct(dictionary: signer)
+//                if signerStruct.id == self.id {
+//                    self.signer = signerStruct
+//                    self.setFields(signerStruct)
+//                }
+//            }
+//        }
     }
     
     private func setFields(_ signer: SignerStruct) {
@@ -417,78 +417,78 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     }
     
     private func updateLabel(_ label: String) {
-        CoreDataService.update(id: id, keyToUpdate: "label", newValue: label, entity: .signers) { [weak self] (success) in
-            guard let self = self else { return }
-            
-            if success {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.tableDict[0]["text"] = label
-                    self.tableView.reloadSections(IndexSet(arrayLiteral: 0), with: .fade)
-                }
-            } else {
-                showAlert(vc: self, title: "Error", message: "Label did not update.")
-            }
-        }
+//        CoreDataService.update(id: id, keyToUpdate: "label", newValue: label, entity: .signers) { [weak self] (success) in
+//            guard let self = self else { return }
+//            
+//            if success {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.tableDict[0]["text"] = label
+//                    self.tableView.reloadSections(IndexSet(arrayLiteral: 0), with: .fade)
+//                }
+//            } else {
+//                showAlert(vc: self, title: "Error", message: "Label did not update.")
+//            }
+//        }
     }
     
     private func updatePassphrase(_ encryptedPassphrase: Data, _ passphrase: String) {
-        CoreDataService.update(id: id, keyToUpdate: "passphrase", newValue: encryptedPassphrase, entity: .signers) { [weak self] success in
-            guard let self = self else { return }
-            
-            if success {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.tableDict[3]["text"] = "**********"
-                    
-                    self.updateSigner(passphrase)
-                }
-            } else {
-                showAlert(vc: self, title: "Error", message: "Label did not update.")
-            }
-        }
+//        CoreDataService.update(id: id, keyToUpdate: "passphrase", newValue: encryptedPassphrase, entity: .signers) { [weak self] success in
+//            guard let self = self else { return }
+//            
+//            if success {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.tableDict[3]["text"] = "**********"
+//                    
+//                    self.updateSigner(passphrase)
+//                }
+//            } else {
+//                showAlert(vc: self, title: "Error", message: "Label did not update.")
+//            }
+//        }
     }
     
-    private func updateSigner(_ passphrase: String) {
-        if let encryptedWords = self.signer.words,
-           let decryptedSigner = Crypto.decrypt(encryptedWords),
-           let words = decryptedSigner.utf8String,
-           let mkMain = Keys.masterKey(words: words, coinType: "0", passphrase: passphrase),
-           let xfp = Keys.fingerprint(masterKey: mkMain),
-           let encryptedXfp = Crypto.encrypt(xfp.utf8),
-           let mkTest = Keys.masterKey(words: words, coinType: "1", passphrase: passphrase),
-           let bip84xpub = Keys.bip84AccountXpub(masterKey: mkMain, coinType: "0", account: 0),
-           let bip84tpub = Keys.bip84AccountXpub(masterKey: mkTest, coinType: "1", account: 0),
-           let bip48xpub = Keys.xpub(path: "m/48'/0'/0'/2'", masterKey: mkMain),
-           let bip48tpub = Keys.xpub(path: "m/48'/1'/0'/2'", masterKey: mkTest),
-           let rootTpub = Keys.xpub(path: "m", masterKey: mkTest),
-           let rootXpub = Keys.xpub(path: "m", masterKey: mkMain),
-           let encryptedRootTpub = Crypto.encrypt(rootTpub.utf8),
-           let encryptedRootXpub = Crypto.encrypt(rootXpub.utf8),
-           let encryptedbip84xpub = Crypto.encrypt(bip84xpub.utf8),
-           let encryptedbip84tpub = Crypto.encrypt(bip84tpub.utf8),
-           let encryptedbip48xpub = Crypto.encrypt(bip48xpub.utf8),
-           let encryptedbip48tpub = Crypto.encrypt(bip48tpub.utf8) {
-            
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip84xpub", newValue: encryptedbip84xpub, entity: .signers) { _ in }
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip84tpub", newValue: encryptedbip84tpub, entity: .signers) { _ in }
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip48xpub", newValue: encryptedbip48xpub, entity: .signers) { _ in }
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip48tpub", newValue: encryptedbip48tpub, entity: .signers) { _ in }
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "xfp", newValue: encryptedXfp, entity: .signers) { _ in }
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "rootTpub", newValue: encryptedRootTpub, entity: .signers) { _ in }
-            CoreDataService.update(id: self.signer.id, keyToUpdate: "rootXpub", newValue: encryptedRootXpub, entity: .signers) { _ in }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                guard let self = self else { return }
-                
-                self.getData()
-                
-                showAlert(vc: self, title: "Signer updated ✓", message: "")
-            }
-        }
-    }
+//    private func updateSigner(_ passphrase: String) {
+//        if let encryptedWords = self.signer.words,
+//           let decryptedSigner = Crypto.decrypt(encryptedWords),
+//           let words = decryptedSigner.utf8String,
+//           let mkMain = Keys.masterKey(words: words, coinType: "0", passphrase: passphrase),
+//           let xfp = Keys.fingerprint(masterKey: mkMain),
+//           let encryptedXfp = Crypto.encrypt(xfp.utf8),
+//           let mkTest = Keys.masterKey(words: words, coinType: "1", passphrase: passphrase),
+//           let bip84xpub = Keys.bip84AccountXpub(masterKey: mkMain, coinType: "0", account: 0),
+//           let bip84tpub = Keys.bip84AccountXpub(masterKey: mkTest, coinType: "1", account: 0),
+//           let bip48xpub = Keys.xpub(path: "m/48'/0'/0'/2'", masterKey: mkMain),
+//           let bip48tpub = Keys.xpub(path: "m/48'/1'/0'/2'", masterKey: mkTest),
+//           let rootTpub = Keys.xpub(path: "m", masterKey: mkTest),
+//           let rootXpub = Keys.xpub(path: "m", masterKey: mkMain),
+//           let encryptedRootTpub = Crypto.encrypt(rootTpub.utf8),
+//           let encryptedRootXpub = Crypto.encrypt(rootXpub.utf8),
+//           let encryptedbip84xpub = Crypto.encrypt(bip84xpub.utf8),
+//           let encryptedbip84tpub = Crypto.encrypt(bip84tpub.utf8),
+//           let encryptedbip48xpub = Crypto.encrypt(bip48xpub.utf8),
+//           let encryptedbip48tpub = Crypto.encrypt(bip48tpub.utf8) {
+//            
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip84xpub", newValue: encryptedbip84xpub, entity: .signers) { _ in }
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip84tpub", newValue: encryptedbip84tpub, entity: .signers) { _ in }
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip48xpub", newValue: encryptedbip48xpub, entity: .signers) { _ in }
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "bip48tpub", newValue: encryptedbip48tpub, entity: .signers) { _ in }
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "xfp", newValue: encryptedXfp, entity: .signers) { _ in }
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "rootTpub", newValue: encryptedRootTpub, entity: .signers) { _ in }
+//            CoreDataService.update(id: self.signer.id, keyToUpdate: "rootXpub", newValue: encryptedRootXpub, entity: .signers) { _ in }
+//            
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+//                guard let self = self else { return }
+//                
+//                self.getData()
+//                
+//                showAlert(vc: self, title: "Signer updated ✓", message: "")
+//            }
+//        }
+//    }
     
     @objc func exportQrNow(_ sender: UIButton) {
         segueToQr()
@@ -625,7 +625,6 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
         qrButton.setImage(.init(systemName: "qrcode"), for: .normal)
         qrButton.imageView?.tintColor = .systemTeal
         qrButton.frame = CGRect(x: x, y: 5, width: 40, height: 40)
-        qrButton.showsTouchWhenHighlighted = true
         qrButton.addTarget(self, action: #selector(exportQr(_:)), for: .touchUpInside)
         return qrButton
     }
@@ -635,7 +634,6 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
         createWalletButton.setImage(.init(systemName: "plus"), for: .normal)
         createWalletButton.imageView?.tintColor = .systemTeal
         createWalletButton.frame = CGRect(x: x, y: 5, width: 40, height: 40)
-        createWalletButton.showsTouchWhenHighlighted = true
         createWalletButton.addTarget(self, action: #selector(createWallet), for: .touchUpInside)
         return createWalletButton
     }
@@ -645,21 +643,20 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
         deleteButton.setImage(.init(systemName: "trash"), for: .normal)
         deleteButton.imageView?.tintColor = .systemRed
         deleteButton.frame = CGRect(x: x, y: 5, width: 40, height: 40)
-        deleteButton.showsTouchWhenHighlighted = true
         return deleteButton
     }
     
     private func deletePassphrase() {
-        CoreDataService.deleteValue(id: signer.id, keyToDelete: "passphrase", entity: .signers) { [weak self] deleted in
-            guard let self = self else { return }
-            
-            guard deleted else {
-                showAlert(vc: self, title: "There was an issue...", message: "Unable to delete your passphrase, please let us know about this bug.")
-                return
-            }
-            
-            self.updateSigner("")
-        }
+//        CoreDataService.deleteValue(id: signer.id, keyToDelete: "passphrase", entity: .signers) { [weak self] deleted in
+//            guard let self = self else { return }
+//            
+//            guard deleted else {
+//                showAlert(vc: self, title: "There was an issue...", message: "Unable to delete your passphrase, please let us know about this bug.")
+//                return
+//            }
+//            
+//            self.updateSigner("")
+//        }
     }
     
     @objc func promptToDeletePassphrase() {
@@ -725,21 +722,21 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     }
     
     private func deleteSeed() {
-        CoreDataService.deleteValue(id: signer.id, keyToDelete: "words", entity: .signers) { [weak self] deleted in
-            guard let self = self else { return }
-            
-            guard deleted else {
-                showAlert(vc: self, title: "There was an issue...", message: "Unable to delete your seed, please let us know about this bug.")
-                return
-            }
-            
-            self.tableDict[1]["ur"] = ""
-            self.tableDict[1]["text"] = ""
-            self.tableDict[1]["censoredText"] = ""
-            self.tableDict[1]["censoredUr"] = ""
-            
-            self.getData()
-        }
+//        CoreDataService.deleteValue(id: signer.id, keyToDelete: "words", entity: .signers) { [weak self] deleted in
+//            guard let self = self else { return }
+//            
+//            guard deleted else {
+//                showAlert(vc: self, title: "There was an issue...", message: "Unable to delete your seed, please let us know about this bug.")
+//                return
+//            }
+//            
+//            self.tableDict[1]["ur"] = ""
+//            self.tableDict[1]["text"] = ""
+//            self.tableDict[1]["censoredText"] = ""
+//            self.tableDict[1]["censoredUr"] = ""
+//            
+//            self.getData()
+//        }
     }
     
     private func setClipBoard(_ string: String) {
@@ -756,52 +753,52 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
     private func importAccountMap(_ descriptor: String, _ label: String, _ password: String) {
         spinner.addConnectingView(vc: self, description: "creating wallet...")
         
-        OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
-            guard let self = self else { return }
-            guard let blockchainInfo = blockchainInfo else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "", message: message ?? "error getting blockchaininfo")
-                return
-            }
-            
-            var accountMap = ["descriptor": descriptor, "watching": [], "label": label, "password": password] as [String : Any]
-            
-            if blockchainInfo.pruned {
-                accountMap["blockheight"] = blockchainInfo.pruneheight
-            } else {
-                accountMap["blockheight"] = 0
-            }
-            
-            ImportWallet.accountMap(accountMap) { (success, errorDescription) in
-                self.spinner.removeConnectingView()
-                
-                guard success else {
-                    showAlert(vc: self, title: "There was an issue creating your wallet...", message: errorDescription ?? "Unknown...")
-                    return
-                }
-                
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    let tit = "Wallet created ✓"
-                    
-                    let mess = "A rescan was triggered, you may not see transactions or balances until the rescan completes."
-                    
-                    let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
-                    
-                    alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { action in
-                        DispatchQueue.main.async { [weak self] in
-                            guard let self = self else { return }
-                            
-                            self.tabBarController?.selectedIndex = 1
-                        }
-                    }))
-                    
-                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                    self.present(alert, animated: true, completion: nil)
-                }
-            }
-        }
+//        OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
+//            guard let self = self else { return }
+//            guard let blockchainInfo = blockchainInfo else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "", message: message ?? "error getting blockchaininfo")
+//                return
+//            }
+//            
+//            var accountMap = ["descriptor": descriptor, "watching": [], "label": label, "password": password] as [String : Any]
+//            
+//            if blockchainInfo.pruned {
+//                accountMap["blockheight"] = blockchainInfo.pruneheight
+//            } else {
+//                accountMap["blockheight"] = 0
+//            }
+//            
+//            ImportWallet.accountMap(accountMap) { (success, errorDescription) in
+//                self.spinner.removeConnectingView()
+//                
+//                guard success else {
+//                    showAlert(vc: self, title: "There was an issue creating your wallet...", message: errorDescription ?? "Unknown...")
+//                    return
+//                }
+//                
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    let tit = "Wallet created ✓"
+//                    
+//                    let mess = "A rescan was triggered, you may not see transactions or balances until the rescan completes."
+//                    
+//                    let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
+//                    
+//                    alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { action in
+//                        DispatchQueue.main.async { [weak self] in
+//                            guard let self = self else { return }
+//                            
+//                            self.tabBarController?.selectedIndex = 1
+//                        }
+//                    }))
+//                    
+//                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+//                    self.present(alert, animated: true, completion: nil)
+//                }
+//            }
+//        }
     }
     
     @objc func createWallet() {
@@ -887,56 +884,56 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
         spinner.addConnectingView(vc: self, description: "creating jm wallet...")
         
         //let blockheight = UserDefaults.standard.object(forKey: "blockheight") as? Int ?? 0
-        OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
-            guard let self = self else { return }
-            guard let blockchainInfo = blockchainInfo else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "", message: message ?? "error getting blockchaininfo")
-                return
-            }
-            
-            var accountMap:[String:Any] = [
-                "descriptor":jmDescriptors[0],
-                "watching":Array(jmDescriptors[2...jmDescriptors.count - 1]),
-                "label":"Join Market"
-            ]
-            
-            if blockchainInfo.pruned {
-                accountMap["blockheight"] = blockchainInfo.pruneheight
-            } else {
-                accountMap["blockheight"] = 0
-            }
-            
-            ImportWallet.accountMap(accountMap) { [weak self] (success, errorDescription) in
-                guard let self = self else { return }
-
-                guard success else {
-                    showAlert(vc: self, title: "There was an issue creating your wallet...", message: errorDescription ?? "Unknown...")
-                    return
-                }
-                
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-
-                    let tit = "JM wallet created ✓"
-
-                    let mess = "A rescan was triggered, you may not see transactions or balances until the rescan completes."
-
-                    let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
-
-                    alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { action in
-                        DispatchQueue.main.async { [weak self] in
-                            guard let self = self else { return }
-
-                            self.tabBarController?.selectedIndex = 1
-                        }
-                    }))
-
-                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                    self.present(alert, animated: true, completion: nil)
-                }
-            }
-        }
+//        OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
+//            guard let self = self else { return }
+//            guard let blockchainInfo = blockchainInfo else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "", message: message ?? "error getting blockchaininfo")
+//                return
+//            }
+//            
+//            var accountMap:[String:Any] = [
+//                "descriptor":jmDescriptors[0],
+//                "watching":Array(jmDescriptors[2...jmDescriptors.count - 1]),
+//                "label":"Join Market"
+//            ]
+//            
+//            if blockchainInfo.pruned {
+//                accountMap["blockheight"] = blockchainInfo.pruneheight
+//            } else {
+//                accountMap["blockheight"] = 0
+//            }
+//            
+//            ImportWallet.accountMap(accountMap) { [weak self] (success, errorDescription) in
+//                guard let self = self else { return }
+//
+//                guard success else {
+//                    showAlert(vc: self, title: "There was an issue creating your wallet...", message: errorDescription ?? "Unknown...")
+//                    return
+//                }
+//                
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//
+//                    let tit = "JM wallet created ✓"
+//
+//                    let mess = "A rescan was triggered, you may not see transactions or balances until the rescan completes."
+//
+//                    let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
+//
+//                    alert.addAction(UIAlertAction(title: "Done", style: .default, handler: { action in
+//                        DispatchQueue.main.async { [weak self] in
+//                            guard let self = self else { return }
+//
+//                            self.tabBarController?.selectedIndex = 1
+//                        }
+//                    }))
+//
+//                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+//                    self.present(alert, animated: true, completion: nil)
+//                }
+//            }
+//        }
         
         
         
@@ -1136,11 +1133,6 @@ class SignerDetailViewController: UIViewController, UINavigationControllerDelega
         // Pass the selected object to the new view controller.
         
         switch segue.identifier {
-        case "segueToCreateMultiSigFromSigner":
-            guard let vc = segue.destination as? CreateMultisigViewController else { fallthrough }
-            
-            vc.cosigner = self.cosigner
-            
         case "segueToExportKeystore":
             guard let vc = segue.destination as? QRDisplayerViewController else { fallthrough }
             

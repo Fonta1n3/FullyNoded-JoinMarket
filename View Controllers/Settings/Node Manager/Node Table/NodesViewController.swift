@@ -236,13 +236,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     }
                     
                     if vc.nodeArray.count == 1 {
-                        if nodeStr.isNostr {
-                            if !selectedSwitch.isOn {
-                                //MakeRPCCall.sharedInstance.disconnect()
-                            } else {
-                                MakeRPCCall.sharedInstance.connectToRelay(node: nodeStr)
-                            }
-                        }
                         vc.reloadTable()
                     }
                                         
@@ -253,13 +246,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             
             if nodeArray.count > 1 {
                 
-                if nodeStr.isNostr {
-                    if !selectedSwitch.isOn {
-                        //MakeRPCCall.sharedInstance.disconnect()
-                    } else {
-                        MakeRPCCall.sharedInstance.connectToRelay(node: nodeStr)
-                    }
-                }
+                
                 
                 for (i, node) in nodeArray.enumerated() {
                     
@@ -454,11 +441,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         if segue.identifier == "updateNode" {
             if let vc = segue.destination as? NodeDetailViewController {
                 vc.selectedNode = self.nodeArray[selectedIndex]
-                if self.nodeArray[selectedIndex]["rpcpassword"] != nil {
-                    vc.isCLN = true
-                } else {
-                    vc.isLND = true
-                }
                 vc.createNew = false
             }
         }
@@ -466,12 +448,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         if segue.identifier == "segueToAddBitcoinCoreNode" {
             if let vc = segue.destination as? NodeDetailViewController {
                 vc.createNew = true
-                vc.isLightning = self.isLightning
-                vc.isJoinMarket = self.isJoinMarket
-                vc.isNostr = self.isNostr
-                vc.isBitcoinCore = self.isBitcoinCore
-                vc.isLND = self.isLND
-                vc.isCLN = self.isCLN
             }
         }
         

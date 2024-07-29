@@ -138,9 +138,9 @@ class QRDisplayerViewController: UIViewController {
         }
         
         if txn != "" {
-            guard let hexData = hex_decode(string) else { return []}
-            data = Data(hexData)
-            fileType = .transaction
+//            guard let hexData = hex_decode(string) else { return []}
+//            data = Data(hexData)
+//            fileType = .transaction
         }
         
         if text != "" {

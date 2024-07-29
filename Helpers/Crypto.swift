@@ -7,7 +7,6 @@
 //
 
 import CryptoKit
-import RNCryptor
 
 enum Crypto {
     
@@ -26,18 +25,6 @@ enum Crypto {
     static func privateKey() -> Data {
         return P256.Signing.PrivateKey().rawRepresentation
     }
-    
-//    static func encryptForBackup(_ key: Data, _ data: Data) -> Data? {
-//        return try? ChaChaPoly.seal(data, using: SymmetricKey(data: key)).combined
-//    }
-//
-//    static func decryptForBackup(_ key: Data, _ data: Data) -> Data? {
-//        guard let box = try? ChaChaPoly.SealedBox.init(combined: data) else {
-//                return nil
-//        }
-//
-//        return try? ChaChaPoly.open(box, using: SymmetricKey(data: key))
-//    }
     
     static func encrypt(_ data: Data) -> Data? {
         guard let key = KeyChain.getData("privateKey") else { return nil }
@@ -59,31 +46,6 @@ enum Crypto {
         let publicKeyData = privkey.publicKey.rawRepresentation
         let pubKey = try! Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData)
         return pubKey.isValidSignature(sig, for: data)
-    }
-    
-    static func blindPsbt(_ psbt: Data) -> Data? {
-        guard let key = KeyChain.getData("blindingKey") else {
-            return nil
-        }
-
-        return try? ChaChaPoly.seal(psbt, using: SymmetricKey(data: key)).combined
-    }
-    
-    static func decryptPsbt(_ data: Data) -> Data? {
-        guard let key = KeyChain.getData("blindingKey"),
-            let box = try? ChaChaPoly.SealedBox.init(combined: data) else {
-                return nil
-        }
-        
-        return try? ChaChaPoly.open(box, using: SymmetricKey(data: key))
-    }
-    
-    static func encryptNostr(_ content: Data, _ password: String) -> Data? {
-        return RNCryptor.encrypt(data: content, withPassword: password.replacingOccurrences(of: " ", with: ""))
-    }
-    
-    static func decryptNostr(_ content: Data, _ password: String) -> Data? {
-        return try? RNCryptor.decrypt(data: content, withPassword: password.replacingOccurrences(of: " ", with: ""))
     }
     
     static func decrypt(_ data: Data) -> Data? {
@@ -109,29 +71,8 @@ enum Crypto {
         return checksum.hexString
     }
     
-    static func setupinit() -> Bool {
-        // Goal is to replace this with a get request to my own server behind an authenticated v3 onion
-        guard KeyChain.getData("blindingKey") == nil else { return true }
-        
-        guard let pk = Data(base64Encoded: currentDate()) else { return false }
-
-        return KeyChain.set(pk, forKey: "blindingKey")
-    }
-    
     static func secret() -> Data? {
         var bytes = [UInt8](repeating: 0, count: 32)
-        let result = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-
-        guard result == errSecSuccess else {
-            print("Problem generating random bytes")
-            return nil
-        }
-
-        return Crypto.sha256hash(Crypto.sha256hash(Crypto.sha256hash(Data(bytes))))
-    }
-    
-    static func secretNick() -> Data? {
-        var bytes = [UInt8](repeating: 0, count: 16)
         let result = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
 
         guard result == errSecSuccess else {

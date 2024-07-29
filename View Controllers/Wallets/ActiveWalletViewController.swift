@@ -10,29 +10,16 @@ import UIKit
 
 class ActiveWalletViewController: UIViewController {
     
-    private var walletInfo: WalletInfo?
-    private var showOnchainOnly = false
-    private var showOnchain = false
-    private var showOffchain = false
-    private var existingWallet = ""
-    private var walletDisabled = Bool()
+    //private var walletInfo: WalletInfo?
     private var onchainBalanceBtc = ""
-    private var onchainBalanceSats = ""
     private var onchainBalanceFiat = ""
-    private var offchainBalanceBtc = ""
-    private var offchainBalanceSats = ""
-    private var offchainBalanceFiat = ""
     private var sectionZeroLoaded = Bool()
-    private var wallets = NSArray()
     private var transactionArray = [[String:Any]]()
-    private var offchainTxArray = [[String:Any]]()
-    private var onchainTxArray = [[String:Any]]()
     private var tx = String()
     private var refreshButton = UIBarButtonItem()
     private var dataRefresher = UIBarButtonItem()
     private var walletLabel:String!
-    private var wallet:Wallet?
-    private var isBolt11 = false
+    private var wallet: Wallet?
     private var fxRate:Double?
     private var alertStyle = UIAlertController.Style.alert
     private let barSpinner = UIActivityIndicatorView(style: .medium)
@@ -48,7 +35,6 @@ class ActiveWalletViewController: UIViewController {
     private var dateFormatter = DateFormatter()
     private var isFiat = false
     private var isBtc = true
-    private var isSats = false
     private var initialLoad = true
     private var isRecovering = false
     var fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
@@ -59,7 +45,6 @@ class ActiveWalletViewController: UIViewController {
     @IBOutlet weak private var sendView: UIView!
     @IBOutlet weak private var invoiceView: UIView!
     @IBOutlet weak private var utxosView: UIView!
-    @IBOutlet weak private var advancedView: UIView!
     @IBOutlet weak private var fxRateLabel: UILabel!
     
     override func viewDidLoad() {
@@ -71,7 +56,6 @@ class ActiveWalletViewController: UIViewController {
         configureUi()
         NotificationCenter.default.addObserver(self, selector: #selector(broadcast(_:)), name: .broadcastTxn, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(signPsbt(_:)), name: .signPsbt, object: nil)
-        existingWallet = ud.object(forKey: "walletName") as? String ?? ""
         setCurrency()
         setNotifications()
         sectionZeroLoaded = false
@@ -92,15 +76,9 @@ class ActiveWalletViewController: UIViewController {
             guard let self = self else { return }
             
             self.onchainBalanceBtc = ""
-            self.onchainBalanceSats = ""
             self.onchainBalanceFiat = ""
-            self.offchainBalanceBtc = ""
-            self.offchainBalanceSats = ""
-            self.offchainBalanceFiat = ""
             self.sectionZeroLoaded = false
             self.transactionArray.removeAll()
-            self.offchainTxArray.removeAll()
-            self.onchainTxArray.removeAll()
             self.walletTable.reloadData()
         }
     }
@@ -114,17 +92,10 @@ class ActiveWalletViewController: UIViewController {
                 index = 0
                 isBtc = true
                 isFiat = false
-                isSats = false
-            case "sats":
-                index = 1
-                isSats = true
-                isFiat = false
-                isBtc = false
             case "fiat":
                 index = 2
                 isFiat = true
                 isBtc = false
-                isSats = false
             default:
                 break
             }
@@ -136,7 +107,6 @@ class ActiveWalletViewController: UIViewController {
         } else {
             isBtc = true
             isFiat = false
-            isSats = false
             
             DispatchQueue.main.async { [unowned vc = self] in
                 vc.currencyControl.selectedSegmentIndex = 0
@@ -158,17 +128,10 @@ class ActiveWalletViewController: UIViewController {
         case 0:
             isFiat = false
             isBtc = true
-            isSats = false
             ud.set("btc", forKey: "unit")
         case 1:
-            isFiat = false
-            isBtc = false
-            isSats = true
-            ud.set("sats", forKey: "unit")
-        case 2:
             isFiat = true
             isBtc = false
-            isSats = false
             ud.set("fiat", forKey: "unit")
         default:
             break
@@ -179,31 +142,33 @@ class ActiveWalletViewController: UIViewController {
     
     
     @objc func signPsbt(_ notification: NSNotification) {
-        guard let psbtDict = notification.userInfo as? [String:Any], let psbtCheck = psbtDict["psbt"] as? String else {
-            showAlert(vc: self, title: "Uh oh", message: "That does not appear to be a psbt...")
-            return
-        }
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            self.psbt = psbtCheck
-            self.performSegue(withIdentifier: "segueToSignPsbt", sender: self)
-        }
+        print("signPsbt")
+//        guard let psbtDict = notification.userInfo as? [String:Any], let psbtCheck = psbtDict["psbt"] as? String else {
+//            showAlert(vc: self, title: "Uh oh", message: "That does not appear to be a psbt...")
+//            return
+//        }
+//        
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            
+//            self.psbt = psbtCheck
+//            self.performSegue(withIdentifier: "segueToSignPsbt", sender: self)
+//        }
     }
     
     @objc func broadcast(_ notification: NSNotification) {
-        guard let txnDict = notification.userInfo as? [String:Any], let txn = txnDict["txn"] as? String else {
-            showAlert(vc: self, title: "Uh oh", message: "That does not appear to be a signed raw transaction...")
-            return
-        }
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            self.rawTx = txn
-            self.performSegue(withIdentifier: "segueToSignPsbt", sender: self)
-        }
+        print("broadcast")
+//        guard let txnDict = notification.userInfo as? [String:Any], let txn = txnDict["txn"] as? String else {
+//            showAlert(vc: self, title: "Uh oh", message: "That does not appear to be a signed raw transaction...")
+//            return
+//        }
+//        
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            
+//            self.rawTx = txn
+//            self.performSegue(withIdentifier: "segueToSignPsbt", sender: self)
+//        }
     }
     
     @IBAction func signPsbtAction(_ sender: Any) {
@@ -224,7 +189,6 @@ class ActiveWalletViewController: UIViewController {
         configureButton(sendView)
         configureButton(invoiceView)
         configureButton(utxosView)
-        configureButton(advancedView)
         
         fxRateLabel.text = ""
         
@@ -301,20 +265,20 @@ class ActiveWalletViewController: UIViewController {
             return
         }
         
-        ImportWallet.accountMap(accountMap) { [weak self] (success, errorDescription) in
-            guard let self = self else { return }
-            
-            guard success else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error importing wallet", message: errorDescription ?? "unknown")
-                return
-            }
-            
-            self.spinner.removeConnectingView()
-            OnchainUtils.rescan { _ in }
-            showAlert(vc: self, title: "Wallet created ✓", message: "It has been activated and is refreshing now. A rescan has been initiated, you may not see balances or transaction history until the rescan completes.")
-            self.refreshWallet()
-        }
+//        ImportWallet.accountMap(accountMap) { [weak self] (success, errorDescription) in
+//            guard let self = self else { return }
+//            
+//            guard success else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "Error importing wallet", message: errorDescription ?? "unknown")
+//                return
+//            }
+//            
+//            self.spinner.removeConnectingView()
+//            OnchainUtils.rescan { _ in }
+//            showAlert(vc: self, title: "Wallet created ✓", message: "It has been activated and is refreshing now. A rescan has been initiated, you may not see balances or transaction history until the rescan completes.")
+//            self.refreshWallet()
+//        }
     }
     
     @objc func addColdcard(_ notification: NSNotification) {
@@ -326,24 +290,23 @@ class ActiveWalletViewController: UIViewController {
             return
         }
         
-        ImportWallet.coldcard(dict: coldCard) { [weak self] (success, errorDescription) in
-            guard let self = self else { return }
-            
-            guard success else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error creating Coldcard wallet", message: errorDescription ?? "unknown")
-                return
-            }
-            
-            self.spinner.removeConnectingView()
-            showAlert(vc: self, title: "Coldcard Wallet imported ✓", message: "It has been activated and is refreshing now.")
-            self.refreshWallet()
-        }
+//        ImportWallet.coldcard(dict: coldCard) { [weak self] (success, errorDescription) in
+//            guard let self = self else { return }
+//            
+//            guard success else {
+//                self.spinner.removeConnectingView()
+//                showAlert(vc: self, title: "Error creating Coldcard wallet", message: errorDescription ?? "unknown")
+//                return
+//            }
+//            
+//            self.spinner.removeConnectingView()
+//            showAlert(vc: self, title: "Coldcard Wallet imported ✓", message: "It has been activated and is refreshing now.")
+//            self.refreshWallet()
+//        }
     }
     
     private func loadTable() {
         sectionZeroLoaded = false
-        existingWallet = ""
         walletLabel = ""
         transactionArray.removeAll()
         walletTable.reloadData()
@@ -361,39 +324,25 @@ class ActiveWalletViewController: UIViewController {
                         return
                     }
                     
-                    var anyOffchain = false
                     
                     for (i, node) in nodes.enumerated() {
                         let nodeStr = NodeStruct(dictionary: node)
-                        if nodeStr.isActive && nodeStr.isLightning {
-                            anyOffchain = true
-                        }
                         if i + 1 == nodes.count {
-                            if anyOffchain {
-                                self.showOnchain = false
-                                self.showOffchain = true
-                                self.loadLightning()
-                            } else {
-                                guard let walletName = UserDefaults.standard.string(forKey: "walletName") else {
-                                    self.finishedLoading()
-                                    showAlert(vc: self, title: "", message: "No wallet currently toggled on.")
-                                    return
-                                }
-                                
-                                self.showOnchain = true
-                                self.existingWallet = walletName
-                                self.walletLabel = walletName
-                                self.loadBalances()
+                            guard let walletName = UserDefaults.standard.string(forKey: "walletName") else {
+                                self.finishedLoading()
+                                showAlert(vc: self, title: "", message: "No wallet currently toggled on.")
+                                return
                             }
+                            
+                            self.walletLabel = walletName
+                            self.getWalletBalance()
                         }
                     }
                 }
                 return
             }
             
-            self.showOnchain = true
             self.wallet = wallet
-            self.existingWallet = wallet.name
             self.walletLabel = wallet.label
             
             DispatchQueue.main.async {
@@ -401,7 +350,7 @@ class ActiveWalletViewController: UIViewController {
                 self.walletTable.reloadData()
             }
             
-            self.loadBalances()
+            self.getWalletBalance()
         }
     }
     
@@ -433,7 +382,6 @@ class ActiveWalletViewController: UIViewController {
                                 if wStr.isJm && wStr.jmWalletName == jmWallet {
                                     UserDefaults.standard.set(wStr.name, forKey: "walletName")
                                     self.wallet = wStr
-                                    self.existingWallet = wStr.name
                                     self.walletLabel = wStr.label
                                     self.loadBalances()
                                 }
@@ -499,21 +447,21 @@ class ActiveWalletViewController: UIViewController {
         
         guard let intString = sender.restorationIdentifier, let int = Int(intString) else { return }
         let tx = transactionArray[int]
-        let id = tx["txID"] as! String
-        let param:Get_Tx = .init(["txid":id, "verbose": true])
-        Reducer.sharedInstance.makeCommand(command: .gettransaction(param)) { [weak self] (response, errorMessage) in
-            guard let self = self else { return }
-            self.spinner.removeConnectingView()
-            guard let dict = response as? NSDictionary, let hex = dict["hex"] as? String else {
-                showAlert(vc: self, title: "There was an issue getting the transaction.", message: errorMessage ?? "unknown error")
-                return
-            }
-            DispatchQueue.main.async {
-                self.confs = Int(tx["confirmations"] as! String)!
-                self.hex = hex
-                self.performSegue(withIdentifier: "segueToTxDetail", sender: self)
-            }
-        }
+//        let id = tx["txID"] as! String
+//        let param:Get_Tx = .init(["txid":id, "verbose": true])
+//        Reducer.sharedInstance.makeCommand(command: .gettransaction(param)) { [weak self] (response, errorMessage) in
+//            guard let self = self else { return }
+//            self.spinner.removeConnectingView()
+//            guard let dict = response as? NSDictionary, let hex = dict["hex"] as? String else {
+//                showAlert(vc: self, title: "There was an issue getting the transaction.", message: errorMessage ?? "unknown error")
+//                return
+//            }
+//            DispatchQueue.main.async {
+//                self.confs = Int(tx["confirmations"] as! String)!
+//                self.hex = hex
+//                self.performSegue(withIdentifier: "segueToTxDetail", sender: self)
+//            }
+//        }
     }
     
     
@@ -542,79 +490,6 @@ class ActiveWalletViewController: UIViewController {
             onchainBalanceLabel.text = onchainBalanceBtc
         }
         
-        if isSats {
-            onchainBalanceLabel.text = onchainBalanceSats
-        }
-        
-        if isFiat {
-            onchainBalanceLabel.text = onchainBalanceFiat
-        }
-                
-        return cell
-    }
-    
-    private func offchainBalancesCell(_ indexPath: IndexPath) -> UITableViewCell {
-        let cell = walletTable.dequeueReusableCell(withIdentifier: "OnBalancesCell", for: indexPath)
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
-        let offchainBalanceLabel = cell.viewWithTag(1) as! UILabel
-        let iconImageView = cell.viewWithTag(67) as! UIImageView
-        iconImageView.image = .init(systemName: "bolt")
-        
-        if offchainBalanceBtc == "" {
-            offchainBalanceBtc = "0.00 000 000"
-        }
-        if isBtc {
-            offchainBalanceLabel.text = offchainBalanceBtc
-        }
-        if isSats {
-            offchainBalanceLabel.text = offchainBalanceSats
-        }
-        if isFiat {
-            offchainBalanceLabel.text = offchainBalanceFiat
-        }
-                
-        return cell
-    }
-    
-    private func offchainOnchainBalancesCell(_ indexPath: IndexPath) -> UITableViewCell {
-        let cell = walletTable.dequeueReusableCell(withIdentifier: "OffOnBalancesCell", for: indexPath)
-        cell.layer.borderColor = UIColor.lightGray.cgColor
-        cell.layer.borderWidth = 0.5
-        cell.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        let offchainBalanceLabel = cell.viewWithTag(2) as! UILabel
-        let offchainBalanceView = cell.viewWithTag(66)!
-        let onchainBalanceLabel = cell.viewWithTag(1) as! UILabel
-        
-        if offchainBalanceBtc == "" {
-            offchainBalanceBtc = "0.00 000 000"
-        }
-        if isBtc {
-            offchainBalanceLabel.text = offchainBalanceBtc
-        }
-        if isSats {
-            offchainBalanceLabel.text = offchainBalanceSats
-        }
-        if isFiat {
-            offchainBalanceLabel.text = offchainBalanceFiat
-        }
-        offchainBalanceLabel.alpha = 1
-        offchainBalanceView.alpha = 1
-        
-        if onchainBalanceBtc == "" || onchainBalanceBtc == "0.0" {
-            onchainBalanceBtc = "0.00 000 000"
-        }
-                
-        if isBtc {
-            onchainBalanceLabel.text = onchainBalanceBtc
-        }
-        
-        if isSats {
-            onchainBalanceLabel.text = onchainBalanceSats
-        }
-        
         if isFiat {
             onchainBalanceLabel.text = onchainBalanceFiat
         }
@@ -633,7 +508,6 @@ class ActiveWalletViewController: UIViewController {
         let amountLabel = cell.viewWithTag(2) as! UILabel
         let confirmationsLabel = cell.viewWithTag(3) as! UILabel
         let dateLabel = cell.viewWithTag(5) as! UILabel
-        let lightningImage = cell.viewWithTag(7) as! UIImageView
         let onchainImage = cell.viewWithTag(8) as! UIImageView
         let currentFiatValueLabel = cell.viewWithTag(9) as! UILabel
         let memoLabel = cell.viewWithTag(10) as! UILabel
@@ -654,48 +528,10 @@ class ActiveWalletViewController: UIViewController {
         editLabelButton.restorationIdentifier = "\(index)"
         
         var dict = self.transactionArray[index]
-        
-        if showOnchainOnly  {
-            dict = self.onchainTxArray[index]
-        }
-        
-        if showOffchain && offchainTxArray.count > 0 {
-            dict = self.offchainTxArray[index]
-            let confs = dict["confirmations"] as! String
-            
-            if confs.contains("complete") {
-                confirmationsLabel.text = "Sent"
-            } else if confs.contains("paid") {
-                confirmationsLabel.text = "Received"
-            } else if confs.contains("Sent") {
-                confirmationsLabel.text = "Sent"
-            } else {
-                confirmationsLabel.text = confs + " " + "confs"
-            }
-        }
-        
-        let isOnchain = dict["onchain"] as? Bool ?? false
-        if isOnchain {
-            seeDetailButton.alpha = 1
-            onchainImage.alpha = 1
-            let confs = dict["confirmations"] as! String
-            confirmationsLabel.text = confs + " " + "confs"
-        } else {
-            onchainImage.alpha = 0
-        }
-        
-        let isLightning = dict["isLightning"] as? Bool ?? false        
-        
-        if isLightning {
-            lightningImage.alpha = 1
-            
-            if !isOnchain {
-                seeDetailButton.alpha = 0
-            }
-        } else {
-            lightningImage.alpha = 0
-        }
-        
+        seeDetailButton.alpha = 1
+        onchainImage.alpha = 1
+        let confs = dict["confirmations"] as! String
+        confirmationsLabel.text = confs + " " + "confs"
         dateLabel.text = dict["date"] as? String
         
         if dict["abandoned"] as? Bool == true {
@@ -765,9 +601,7 @@ class ActiveWalletViewController: UIViewController {
             
             if isBtc {
                 amountText = amountBtc
-            } else if isSats {
-                amountText = amountSats.sats
-            } else if isFiat {
+            } else {
                 amountText = amountFiat
             }
             
@@ -783,9 +617,7 @@ class ActiveWalletViewController: UIViewController {
             
             if isBtc {
                 amountText = "+" + amountBtc
-            } else if isSats {
-                amountText = "+" + amountSats.sats
-            } else if isFiat {
+            } else {
                 amountText = "+" + amountFiat
             }
             
@@ -803,68 +635,7 @@ class ActiveWalletViewController: UIViewController {
         return cell
     }
     
-    @objc func fetchMemo(_ sender: UIButton) {
-        guard let intString = sender.restorationIdentifier, let int = Int(intString) else { return }
         
-        var tx:[String:Any]!
-        
-        if self.showOffchain {
-            tx = self.offchainTxArray[int]
-        } else if self.showOnchain {
-            tx = self.onchainTxArray[int]
-        } else {
-            tx = self.transactionArray[int]
-        }
-                        
-        guard let invoice = tx["address"] as? String, invoice != "" else {
-            showAlert(vc: self, title: "No invoice.", message: "We do not seem to have an invoice for that transaction.  You can add your own memo by tapping the \"edit memo\" button.")
-            return
-        }
-        
-        spinner.addConnectingView(vc: self, description: "decoding invoice...")
-        
-        isLndNode { isLnd in
-            if isLnd {
-                self.decodeInvoiceLND(invoice: invoice, section: int)
-            } else {
-                self.decodeInvoiceCL(invoice: invoice, section: int)
-            }
-        }
-    }
-    
-    private func decodeInvoiceCL(invoice: String, section: Int) {
-        let commandId = UUID()
-        //bolt11 [description]
-        LightningRPC.sharedInstance.command(id: commandId, method: .decodepay, param: ["bolt11": invoice]) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self else { return }
-                        
-            guard let dict = response as? [String:Any], let txid = dict["payment_hash"] as? String, let description = dict["description"] as? String else {
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "unknown error")
-                return
-            }
-            
-            self.updateMemo(txid: txid, memo: description)
-        }
-    }
-    
-    private func decodeInvoiceLND(invoice: String, section: Int) {
-        LndRpc.sharedInstance.command(.decodepayreq, nil, invoice, nil) { [weak self] (response, error) in
-            guard let self = self else { return }
-            
-            guard let response = response,
-                  let memo = response["description"] as? String,
-                  memo != "",
-                  let txid = response["payment_hash"] as? String else {
-                
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "No memo.", message: "This invoice does not include a memo. You can add your own by tapping the \"edit memo\" button.")
-                return
-            }
-            
-            self.updateMemo(txid: txid, memo: memo)
-        }
-    }
-    
     private func updateMemo(txid: String, memo: String) {
         addNavBarSpinner()
         
@@ -928,59 +699,13 @@ class ActiveWalletViewController: UIViewController {
         refreshAll()
     }
     
-    private func checkIfWalletsChanged() {
-        let walletName = ud.object(forKey: "walletName") as? String ?? ""
-        
-        if walletName != existingWallet {
-            existingWallet = walletName
-            reloadWalletData()
-        }
-    }
     
     private func loadBalances() {
-        NodeLogic.walletDisabled = walletDisabled
-        CoreDataService.retrieveEntity(entityName: .newNodes) { [weak self] nodes in
-            guard let self = self else { return }
-            self.showOffchain = false
-            for node in nodes ?? [] {
-                let s = NodeStruct(dictionary: node)
-                if s.isLightning && s.isActive || s.isNostr && s.isActive {
-                    self.showOffchain = true
-                }
-            }
-            self.getWalletBalance()
-        }
+        print("loadBalances")
     }
     
     private func chooseWallet() {
-        OnchainUtils.listWalletDir { (coreWallets, message) in
-            guard let coreWallets = coreWallets, !coreWallets.wallets.isEmpty else { self.promptToCreateWallet(); return }
-            
-            CoreDataService.retrieveEntity(entityName: .wallets) { localWallets in
-                guard let localWallets = localWallets, !localWallets.isEmpty else { self.promptToCreateWallet(); return }
-                
-                var walletExists = false
-                
-                for (i, coreWallet) in coreWallets.wallets.enumerated() {
-                    for (x, localWallet) in localWallets.enumerated() {
-                        if localWallet["id"] != nil {
-                            let localWalletStruct = Wallet(dictionary: localWallet)
-                            if coreWallet == localWalletStruct.name {
-                                walletExists = true
-                            }
-                            
-                            if i + 1 == coreWallets.wallets.count && x + 1 == localWallets.count {
-                                if walletExists {
-                                    self.promptToChooseWallet()
-                                } else {
-                                    self.promptToCreateWallet()
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        print("chooseWallet")
     }
     
     
@@ -1017,288 +742,139 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func getWalletBalance() {
-        if let _ = UserDefaults.standard.object(forKey: "walletName") as? String {
-            
-            func getOnchainWalletBalance() {
-                OnchainUtils.getBalance { [weak self] (balance, message) in
-                    guard let self = self else { return }
-                    
-                    guard let balance = balance else {
-                        self.removeSpinner()
-                        if (message ?? "").hasPrefix("loadwallet") {
-                            self.chooseWallet()
-                        } else {
-                            showAlert(vc: self, title: "", message: message ?? "Unknown error getting balance.")
-                        }
-                        
-                        return
-                    }
-                    
-                    DispatchQueue.main.async {
-                        self.onchainBalanceBtc = balance.btcBalanceWithSpaces
-                        self.onchainBalanceSats = balance.sats.replacingOccurrences(of: " sats", with: "")
-                        
-                        if let exchangeRate = self.fxRate {
-                            let onchainBalanceFiat = balance * exchangeRate
-                            self.onchainBalanceFiat = round(onchainBalanceFiat).fiatString
-                        }
-                        
-                        self.sectionZeroLoaded = true
-                        self.walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
-                        self.getWalletInfo()
-                    }
-                }
-            }
-            
-            guard let wallet = wallet else {
-                getOnchainWalletBalance()
-                return
-            }
-            
-            if wallet.isJm {
-                JMRPC.sharedInstance.command(method: .listutxos(jmWallet: wallet), param: nil) { [weak self] (response, errorDesc) in
-                    guard let self = self else { return }
-                    guard let response = response as? [String:Any] else {
-                        if errorDesc == "Invalid credentials." {
-                            JMUtils.unlockWallet(wallet: self.wallet!) { (unlockedWallet, unlock_message) in
-                                guard let _ = unlockedWallet else {
-                                    showAlert(vc: self, title: "", message: unlock_message ?? "Unknown error unlocking wallet.")
-                                    return
-                                }
-                                CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
-                                    for w in wallets! {
-                                        if w["id"] != nil {
-                                            let s = Wallet(dictionary: w)
-                                            if s.jmWalletName == self.wallet!.jmWalletName {
-                                                self.wallet = s
-                                                self.getWalletBalance()
-                                            }
+        guard let wallet = wallet else {
+            return
+        }
+        
+        if wallet.isJm {
+            JMRPC.sharedInstance.command(method: .listutxos(jmWallet: wallet), param: nil) { [weak self] (response, errorDesc) in
+                guard let self = self else { return }
+                guard let response = response as? [String:Any] else {
+                    if errorDesc == "Invalid credentials." {
+                        JMUtils.unlockWallet(wallet: self.wallet!) { (unlockedWallet, unlock_message) in
+                            guard let _ = unlockedWallet else {
+                                showAlert(vc: self, title: "", message: unlock_message ?? "Unknown error unlocking wallet.")
+                                return
+                            }
+                            CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
+                                for w in wallets! {
+                                    if w["id"] != nil {
+                                        let s = Wallet(dictionary: w)
+                                        if s.jmWalletName == self.wallet!.jmWalletName {
+                                            self.wallet = s
+                                            self.getWalletBalance()
                                         }
                                     }
                                 }
                             }
-                        } else {
-                            showAlert(vc: self, title: "", message: errorDesc ?? "Unknown issue getting jm utxos.")
                         }
-                        
-                        return
+                    } else {
+                        showAlert(vc: self, title: "", message: errorDesc ?? "Unknown issue getting jm utxos.")
                     }
-                    guard let utxos = response["utxos"] as? [[String:Any]] else { return }
-                    var totalBalance = 0.0
-                    for utxo in utxos {
-                        let value = utxo["value"] as! Int
-                        totalBalance += value.satsToBtcDouble
-                    }
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        totalBalance = Double(round(100000000 * totalBalance) / 100000000)
-                        self.onchainBalanceBtc = totalBalance.btcBalanceWithSpaces
-                        self.onchainBalanceSats = totalBalance.sats.replacingOccurrences(of: " sats", with: "")
-                        self.sectionZeroLoaded = true
-                        self.walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
-                        self.getWalletInfo()
-                    }
-                }
-            } else {
-                getOnchainWalletBalance()
-            }
-        } else {
-            chooseWallet()
-        }
-    }
-    
-    private func getWalletInfo() {
-        OnchainUtils.getWalletInfo { [weak self] (walletInfo, message) in
-            guard let self = self else { return }
-            
-            guard let walletInfo = walletInfo else {
-                if let message = message {
-                    showAlert(vc: self, title: "", message: message)
-                    self.removeSpinner()
-                }
-                return
-            }
-            
-            self.walletInfo = walletInfo
-            self.syncIndexes()
-            
-            guard let progress = walletInfo.progress else {
-                return
-            }
-            
-            showAlert(vc: self, title: "Wallet scanning \(Int(progress * 100))% complete", message: "Your wallet is currently rescanning the blockchain, you need to wait until it completes before you will see your balances and transactions.")
-        }
-    }
-    
-    private func loadLightning() {
-        NodeLogic.loadBalances { [weak self] (response, errorMessage) in
-            guard let self = self else { return }
-            guard let response = response else {
-                guard let errorMessage = errorMessage else { return }
-                self.removeSpinner()
-                showAlert(vc: self, title: "", message: errorMessage)
-                return
-            }
-            
-            let balances = Balances(dictionary: response)
-            self.offchainBalanceBtc = balances.offchainBalance.doubleValue.btcBalanceWithSpaces
-            self.offchainBalanceSats = balances.offchainBalance.btcToSats
-            
-            if let exchangeRate = self.fxRate {
-                let offchainBalance = balances.offchainBalance.doubleValue
-                let offchainBalanceFiat = offchainBalance * exchangeRate
-                self.offchainBalanceFiat = round(offchainBalanceFiat).fiatString
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                self.sectionZeroLoaded = true
-                self.walletTable.reloadSections(.init(arrayLiteral: 0), with: .none)
-                self.loadTransactions()
-            }
-        }
-    }
-    
-    private func syncIndexes() {
-        let p:List_Unspent = .init(["minconf":0])
-        OnchainUtils.listUnspent(param: p) { [weak self] (utxos, message) in
-            guard let self = self else { return }
-            
-            guard let utxos = utxos, utxos.count > 0, let wallet = self.wallet else {
-                self.getOffchainBalanceAndTransactions()
-                return
-            }
-            
-            for (i, utxo) in utxos.enumerated() {
-                guard let utxo_desc = utxo.desc else {
-                    if i + 1 == utxos.count {
-                        self.getOffchainBalanceAndTransactions()
-                    }
+                    
                     return
                 }
-                
-                let desc = Descriptor(utxo_desc)
-                
-                guard let index = desc.index else {
-                    if i + 1 == utxos.count {
-                        self.getOffchainBalanceAndTransactions()
-                    }
-                    return
+                guard let utxos = response["utxos"] as? [[String:Any]] else { return }
+                var totalBalance = 0.0
+                for utxo in utxos {
+                    let value = utxo["value"] as! Int
+                    totalBalance += value.satsToBtcDouble
                 }
-                
-                if index >= wallet.index {
-                    let newIndex = Int64(index + 1)
-                    if newIndex >= wallet.maxIndex {
-                        showAlert(vc: self, title: "Action required", message: "Go to wallet info, scroll to \"gap limit\", and tap the + button to increase the gap limit.")
-                    }
-                    CoreDataService.update(id: wallet.id, keyToUpdate: "index", newValue: newIndex, entity: .wallets) { updated in
-                        #if DEBUG
-                        print("incremented index to \(newIndex): \(updated)")
-                        #endif
-                        guard updated else {
-                            if i + 1 == utxos.count {
-                                self.getOffchainBalanceAndTransactions()
-                            }
-                            showAlert(vc: self, title: "", message: "Unable to update your wallet index.")
-                            return
-                        }
-                    }
-                }
-                
-                if i + 1 == utxos.count {
-                    self.getOffchainBalanceAndTransactions()
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    totalBalance = Double(round(100000000 * totalBalance) / 100000000)
+                    self.onchainBalanceBtc = totalBalance.btcBalanceWithSpaces
+                    self.sectionZeroLoaded = true
+                    self.walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
                 }
             }
         }
     }
     
-    private func getOffchainBalanceAndTransactions() {
-        if self.showOffchain {
-            self.loadLightning()
-        } else {
-            self.loadTransactions()
-        }
-    }
+    
+    
+    
+   
     
     private func promptToRescan() {
         let hasPrompted = UserDefaults.standard.value(forKey: "hasPromptedToRescan") as? Bool ?? false
-        if !hasPrompted {
-            UserDefaults.standard.setValue(true, forKey: "hasPromptedToRescan")
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                let alert = UIAlertController(title: "No transactions found.", message: "Would you like to rescan the blockchain to search for transaction history and balances? Input the year you'd like to rescan from.", preferredStyle: self.alertStyle)
-                
-                let rescan = UIAlertAction(title: "Rescan", style: .default) { [weak self] (alertAction) in
-                    guard let self = self else { return }
-                    let textField = (alert.textFields![0] as UITextField)
-                    var blockheight = 0
-                    let currentYear = Int(Calendar.current.component(.year, from: .now))
-                    if let text = textField.text {
-                        var yearToScanFrom = Int(text) ?? 2009
-                        
-                        if yearToScanFrom <= currentYear {
-                            if yearToScanFrom < 2010 {
-                                yearToScanFrom = 2010
-                            }
-                            let yearsToScan = (currentYear - yearToScanFrom) + 1
-                            let blocksToScan = yearsToScan * 55000
-                            
-                            spinner.addConnectingView(vc: self, description: "rescanning...")
-                            
-                            OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
-                                guard let self = self else { return }
-                                
-                                guard let blockchainInfo = blockchainInfo else {
-                                    spinner.removeConnectingView()
-                                    showAlert(vc: self, title: "", message: message ?? "Unknown issue getblockchaininfo.")
-                                    return
-                                }
-                                
-                                if !blockchainInfo.initialblockdownload {
-                                    blockheight = blockchainInfo.blockheight - blocksToScan
-                                    
-                                    if blockchainInfo.pruned {
-                                        if blockheight < blockchainInfo.pruneheight {
-                                            blockheight = blockchainInfo.pruneheight
-                                        }
-                                    }
-                                    
-                                    OnchainUtils.rescanNow(from: blockheight) { [weak self] (started, message) in
-                                        guard let self = self else { return }
-                                        
-                                        guard started else {
-                                            spinner.removeConnectingView()
-                                            showAlert(vc: self, title: "", message: message ?? "Unknown issue from rescan.")
-                                            return
-                                        }
-                                        
-                                        self.spinner.removeConnectingView()
-                                        showAlert(vc: self, title: "", message: "Rescanning, you can refresh this page to see completion status.")
-                                    }
-                                } else {
-                                    spinner.removeConnectingView()
-                                    showAlert(vc: self, title: "", message: "Wait till your node is done syncing before attempting to rescan or use wallets.")
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                alert.addTextField { (textField) in
-                    textField.placeholder = "From year"
-                    textField.keyboardAppearance = .dark
-                    textField.keyboardType = .numberPad
-                    textField.text = "2009"
-                }
-                
-                alert.addAction(rescan)
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
-            }
-        }
+//        if !hasPrompted {
+//            UserDefaults.standard.setValue(true, forKey: "hasPromptedToRescan")
+//            DispatchQueue.main.async { [weak self] in
+//                guard let self = self else { return }
+//                
+//                let alert = UIAlertController(title: "No transactions found.", message: "Would you like to rescan the blockchain to search for transaction history and balances? Input the year you'd like to rescan from.", preferredStyle: self.alertStyle)
+//                
+//                let rescan = UIAlertAction(title: "Rescan", style: .default) { [weak self] (alertAction) in
+//                    guard let self = self else { return }
+//                    let textField = (alert.textFields![0] as UITextField)
+//                    var blockheight = 0
+//                    let currentYear = Int(Calendar.current.component(.year, from: .now))
+//                    if let text = textField.text {
+//                        var yearToScanFrom = Int(text) ?? 2009
+//                        
+//                        if yearToScanFrom <= currentYear {
+//                            if yearToScanFrom < 2010 {
+//                                yearToScanFrom = 2010
+//                            }
+//                            let yearsToScan = (currentYear - yearToScanFrom) + 1
+//                            let blocksToScan = yearsToScan * 55000
+//                            
+//                            spinner.addConnectingView(vc: self, description: "rescanning...")
+//                            
+//                            OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
+//                                guard let self = self else { return }
+//                                
+//                                guard let blockchainInfo = blockchainInfo else {
+//                                    spinner.removeConnectingView()
+//                                    showAlert(vc: self, title: "", message: message ?? "Unknown issue getblockchaininfo.")
+//                                    return
+//                                }
+//                                
+//                                if !blockchainInfo.initialblockdownload {
+//                                    blockheight = blockchainInfo.blockheight - blocksToScan
+//                                    
+//                                    if blockchainInfo.pruned {
+//                                        if blockheight < blockchainInfo.pruneheight {
+//                                            blockheight = blockchainInfo.pruneheight
+//                                        }
+//                                    }
+//                                    
+//                                    OnchainUtils.rescanNow(from: blockheight) { [weak self] (started, message) in
+//                                        guard let self = self else { return }
+//                                        
+//                                        guard started else {
+//                                            spinner.removeConnectingView()
+//                                            showAlert(vc: self, title: "", message: message ?? "Unknown issue from rescan.")
+//                                            return
+//                                        }
+//                                        
+//                                        self.spinner.removeConnectingView()
+//                                        showAlert(vc: self, title: "", message: "Rescanning, you can refresh this page to see completion status.")
+//                                    }
+//                                } else {
+//                                    spinner.removeConnectingView()
+//                                    showAlert(vc: self, title: "", message: "Wait till your node is done syncing before attempting to rescan or use wallets.")
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//                
+//                alert.addTextField { (textField) in
+//                    textField.placeholder = "From year"
+//                    textField.keyboardAppearance = .dark
+//                    textField.keyboardType = .numberPad
+//                    textField.text = "2009"
+//                }
+//                
+//                alert.addAction(rescan)
+//                
+//                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+//                alert.popoverPresentationController?.sourceView = self.view
+//                self.present(alert, animated: true, completion: nil)
+//            }
+//        }
     }
     
     private func promptToCreateWallet() {
@@ -1392,8 +968,6 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func loadTransactions() {
-        NodeLogic.walletDisabled = walletDisabled
-        NodeLogic.arrayToReturn.removeAll()
         transactionArray.removeAll()
         
         NodeLogic.loadSectionTwo { [weak self] (response, errorMessage) in
@@ -1413,10 +987,9 @@ class ActiveWalletViewController: UIViewController {
                 guard let self = self else { return }
                 
                 self.transactionArray = response
-                if let scanning = walletInfo?.scanning {
-                    if !scanning && transactionArray.count == 0 {
-                        promptToRescan()
-                    }
+                
+                if transactionArray.count == 0 {
+                    promptToRescan()
                 }
                 
                 self.updateTransactionArray()
@@ -1454,13 +1027,8 @@ class ActiveWalletViewController: UIViewController {
         sectionZeroLoaded = false
         wallet = nil
         walletLabel = nil
-        existingWallet = ""
-        onchainBalanceSats = ""
         onchainBalanceFiat = ""
         onchainBalanceBtc = ""
-        offchainBalanceSats = ""
-        offchainBalanceFiat = ""
-        offchainBalanceBtc = ""
         
         DispatchQueue.main.async { [ weak self] in
             guard let self = self else { return }
@@ -1496,51 +1064,18 @@ class ActiveWalletViewController: UIViewController {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            let alert = UIAlertController(title: "Filter by", message: "", preferredStyle: self.alertStyle)
-            
-            alert.addAction(UIAlertAction(title: "Offchain", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                
-                for (i, tx) in self.transactionArray.enumerated() {
-                    if let isOnchain = tx["onchain"] as? Bool, !isOnchain, let isLightning = tx["isLightning"] as? Bool, isLightning {
-                        self.offchainTxArray.append(tx)
-                    }
-                    
-                    if i + 1 == self.transactionArray.count, self.offchainTxArray.count > 0 {
-                        self.showOffchain = true
-                        self.showOnchainOnly = false
-                        self.reloadTable()
-                    }
-                }
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Onchain", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                
-                for (i, tx) in self.transactionArray.enumerated() {
-                    if let isOnchain = tx["onchain"] as? Bool, isOnchain, let isLightning = tx["isLightning"] as? Bool, !isLightning {
-                        self.onchainTxArray.append(tx)
-                    }
-                    
-                    if i + 1 == self.transactionArray.count, self.onchainTxArray.count > 0 {
-                        self.showOnchainOnly = true
-                        self.showOffchain = false
-                        self.reloadTable()
-                    }
-                }
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Show all", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.showOnchainOnly = false
-                self.showOffchain = false
-                self.reloadTable()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
+            print("filterTxs")
+//            for (i, tx) in self.transactionArray.enumerated() {
+//                if let isOnchain = tx["onchain"] as? Bool, isOnchain, let isLightning = tx["isLightning"] as? Bool, !isLightning {
+//                    self.onchainTxArray.append(tx)
+//                }
+//                
+//                if i + 1 == self.transactionArray.count, self.onchainTxArray.count > 0 {
+//                    self.showOnchainOnly = true
+//                    self.showOffchain = false
+//                    self.reloadTable()
+//                }
+//            }
         }
     }
     
@@ -1553,13 +1088,7 @@ class ActiveWalletViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Amount", style: .default, handler: { [weak self] action in
                 guard let self = self else { return }
                 
-                if self.showOffchain {
-                    self.offchainTxArray = self.offchainTxArray.sorted{ ($0["amountBtc"] as! String).doubleValue > ($1["amountBtc"] as! String).doubleValue }
-                } else if self.showOnchain {
-                    self.onchainTxArray = self.onchainTxArray.sorted{ ($0["amountBtc"] as! String).doubleValue > ($1["amountBtc"] as! String).doubleValue }
-                } else {
-                    self.transactionArray = self.transactionArray.sorted{ ($0["amountBtc"] as! String).doubleValue > ($1["amountBtc"] as! String).doubleValue }
-                }
+                self.transactionArray = self.transactionArray.sorted{ ($0["amountBtc"] as! String).doubleValue > ($1["amountBtc"] as! String).doubleValue }
                 
                 self.reloadTable()
             }))
@@ -1567,13 +1096,7 @@ class ActiveWalletViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Newest first", style: .default, handler: { [weak self] action in
                 guard let self = self else { return }
                 
-                if self.showOffchain {
-                    self.offchainTxArray = self.offchainTxArray.sorted{ ($0["sortDate"] as? Date ?? Date()) > ($1["sortDate"] as? Date ?? Date()) }
-                } else if self.showOnchain {
-                    self.onchainTxArray = self.onchainTxArray.sorted{ ($0["sortDate"] as? Date ?? Date()) > ($1["sortDate"] as? Date ?? Date()) }
-                } else {
-                    self.transactionArray = self.transactionArray.sorted{ ($0["sortDate"] as? Date ?? Date()) > ($1["sortDate"] as? Date ?? Date()) }
-                }
+                self.transactionArray = self.transactionArray.sorted{ ($0["sortDate"] as? Date ?? Date()) > ($1["sortDate"] as? Date ?? Date()) }
                 
                 self.reloadTable()
                 
@@ -1582,13 +1105,7 @@ class ActiveWalletViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Oldest first", style: .default, handler: { [weak self] action in
                 guard let self = self else { return }
                 
-                if self.showOffchain {
-                    self.offchainTxArray = self.offchainTxArray.sorted{ ($0["sortDate"] as? Date ?? Date()) < ($1["sortDate"] as? Date ?? Date()) }
-                } else if self.showOnchain {
-                    self.onchainTxArray = self.onchainTxArray.sorted{ ($0["sortDate"] as? Date ?? Date()) < ($1["sortDate"] as? Date ?? Date()) }
-                } else {
-                    self.transactionArray = self.transactionArray.sorted{ ($0["sortDate"] as? Date ?? Date()) < ($1["sortDate"] as? Date ?? Date()) }
-                }
+                self.transactionArray = self.transactionArray.sorted{ ($0["sortDate"] as? Date ?? Date()) < ($1["sortDate"] as? Date ?? Date()) }
                 
                 self.reloadTable()
             }))
@@ -1609,10 +1126,6 @@ class ActiveWalletViewController: UIViewController {
                 vc.balance = onchainBalanceBtc
             }
             
-            if isSats {
-                vc.balance = onchainBalanceSats
-            }
-            
             if isFiat {
                 vc.balance = onchainBalanceFiat
             }
@@ -1621,7 +1134,6 @@ class ActiveWalletViewController: UIViewController {
             guard let vc = segue.destination as? InvoiceViewController else { fallthrough }
             
             vc.isBtc = isBtc
-            vc.isSats = isSats
             vc.isFiat = isFiat
         
         case "segueToSignPsbt":
@@ -1656,7 +1168,6 @@ class ActiveWalletViewController: UIViewController {
             
             vc.fxRate = fxRate
             vc.isBtc = isBtc
-            vc.isSats = isSats
             vc.isFiat = isFiat
             
         case "segueToActiveWalletDetail":
@@ -1670,13 +1181,14 @@ class ActiveWalletViewController: UIViewController {
             vc.walletId = idDetail
             
         case "chooseAWallet":
-            guard let vc = segue.destination as? ChooseWalletViewController else { fallthrough }
-            
-            vc.wallets = wallets
-            
-            vc.doneBlock = { result in
-                self.loadTable()
-            }
+            print("segueToChooseWallet")
+//            guard let vc = segue.destination as? ChooseWalletViewController else { fallthrough }
+//            
+//            vc.wallets = wallets
+//            
+//            vc.doneBlock = { result in
+//                self.loadTable()
+//            }
             
         case "segueToAccountMap":
             guard let vc = segue.destination as? QRDisplayerViewController else { fallthrough }
@@ -1716,13 +1228,7 @@ extension ActiveWalletViewController: UITableViewDelegate {
         switch indexPath.section {
         case 0:
             if sectionZeroLoaded {
-                if showOnchain && !showOffchain {
-                    return onchainBalancesCell(indexPath)
-                } else if showOffchain && !showOnchain {
-                    return offchainBalancesCell(indexPath)
-                } else {
-                    return offchainOnchainBalancesCell(indexPath)
-                }
+                return onchainBalancesCell(indexPath)
             } else {
                 return blankCell()
             }
@@ -1801,11 +1307,7 @@ extension ActiveWalletViewController: UITableViewDelegate {
         switch indexPath.section {
         case 0:
             if sectionZeroLoaded {
-                if showOffchain && showOnchain {
-                    return 100
-                } else {
-                    return 80
-                }
+                return 80
             } else {
                 return 47
             }
@@ -1826,13 +1328,7 @@ extension ActiveWalletViewController: UITableViewDataSource {
     
     func numberOfSections(in tableView: UITableView) -> Int {
         if transactionArray.count > 0 {
-            if showOnchainOnly {
-                return 1 + onchainTxArray.count
-            } else if showOffchain && !showOnchain {
-                return 1 + offchainTxArray.count
-            } else {
-                return 1 + transactionArray.count
-            }
+            return 1 + transactionArray.count
 
         } else {
             return 2

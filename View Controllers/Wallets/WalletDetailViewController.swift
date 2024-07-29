@@ -83,14 +83,14 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             let alert = UIAlertController(title: tit, message: mess, preferredStyle: .alert)
             
             alert.addAction(UIAlertAction(title: "Rescan", style: .default, handler: { action in
-                OnchainUtils.rescan() { (started, message) in
-                    guard started else {
-                        showAlert(vc: self, title: "", message: message ?? "error rescanning")
-                        return
-                    }
-                    
-                    showAlert(vc: self, title: "", message: "Rescan started, refresh the active wallet view to see rescan completion status.")
-                }
+//                OnchainUtils.rescan() { (started, message) in
+//                    guard started else {
+//                        showAlert(vc: self, title: "", message: message ?? "error rescanning")
+//                        return
+//                    }
+//                    
+//                    showAlert(vc: self, title: "", message: "Rescan started, refresh the active wallet view to see rescan completion status.")
+//                }
             }))
             
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
@@ -124,29 +124,29 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func deriveAddresses(_ descriptor: String) {
-        let p:Get_Descriptor_Info = .init(["descriptor": descriptor])
-        OnchainUtils.getDescriptorInfo(p) { (descriptorInfo, message) in
-            guard let descriptorInfo = descriptorInfo else { return }
-            let desc = descriptorInfo.descriptor
-            let param:Derive_Addresses = .init(["descriptor":desc, "range":[0,999]])
-            OnchainUtils.deriveAddresses(param: param) { [weak self] (response, message) in
-                if let addr = response as? NSArray {
-                    for (i, address) in addr.enumerated() {
-                        guard let self = self else { return }
-                        self.addresses += "#\(i): \(address)\n\n"
-                        if i + 1 == addr.count {
-                            DispatchQueue.main.async { [weak self] in
-                                self?.spinner.removeConnectingView()
-                                self?.detailTable.reloadSections(IndexSet(arrayLiteral: Section.addressExplorer.rawValue), with: .none)
-                            }
-                        }
-                    }
-                } else {
-                    self?.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "We were unable to derive your addresses", message: "")
-                }
-            }
-        }
+//        let p:Get_Descriptor_Info = .init(["descriptor": descriptor])
+//        OnchainUtils.getDescriptorInfo(p) { (descriptorInfo, message) in
+//            guard let descriptorInfo = descriptorInfo else { return }
+//            let desc = descriptorInfo.descriptor
+//            let param:Derive_Addresses = .init(["descriptor":desc, "range":[0,999]])
+//            OnchainUtils.deriveAddresses(param: param) { [weak self] (response, message) in
+//                if let addr = response as? NSArray {
+//                    for (i, address) in addr.enumerated() {
+//                        guard let self = self else { return }
+//                        self.addresses += "#\(i): \(address)\n\n"
+//                        if i + 1 == addr.count {
+//                            DispatchQueue.main.async { [weak self] in
+//                                self?.spinner.removeConnectingView()
+//                                self?.detailTable.reloadSections(IndexSet(arrayLiteral: Section.addressExplorer.rawValue), with: .none)
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    self?.spinner.removeConnectingView()
+//                    showAlert(vc: self, title: "We were unable to derive your addresses", message: "")
+//                }
+//            }
+//        }
     }
     
     private func addTapGesture() {
@@ -255,7 +255,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
                         generator.textInput = bbqrText
                         exportWalletImageBBQr = generator.getQRCode()
                         
-                        self.findSigner()
+                        //self.findSigner()
                         self.getAddresses()
                         spinner.removeConnectingView()
                     }
@@ -271,18 +271,18 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         return fingerprintsString.components(separatedBy: ",")
     }
     
-    private func findSigner() {
-        CoreDataService.retrieveEntity(entityName: .signers) { [weak self] signers in
-            guard let signers = signers, signers.count > 0 else {
-                DispatchQueue.main.async {
-                    self?.detailTable.reloadData()
-                }
-                return
-            }
-            
-            self?.parseSigners(signers)
-        }
-    }
+//    private func findSigner() {
+//        CoreDataService.retrieveEntity(entityName: .signers) { [weak self] signers in
+//            guard let signers = signers, signers.count > 0 else {
+//                DispatchQueue.main.async {
+//                    self?.detailTable.reloadData()
+//                }
+//                return
+//            }
+//            
+//            self?.parseSigners(signers)
+//        }
+//    }
     
     private func parseSigners(_ signers: [[String:Any]]) {
         for (i, signer) in signers.enumerated() {
@@ -1122,40 +1122,40 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func importDescriptors(index: Int, maxRange: Int, descriptorsToImport: [String]) {
-        if index < descriptorsToImport.count {
-            updateSpinnerText(text: "importing descriptor #\(index + 1), \(maxRange - Int(wallet.maxIndex) + 1) public keys...")
-            
-            let descriptor = descriptorsToImport[index]
-            var paramDict:[String:Any] = [:]
-            var requests:[[String:Any]] = []
-            var request:[String:Any] = [:]
-            request["desc"] = descriptor
-            request["range"] = [0, maxRange]
-            request["timestamp"] = "now"
-            request["next_index"] = Int(wallet.maxIndex) + 1
-            
-            if descriptor.contains(wallet.changeDescriptor) {
-                request["internal"] = true
-                
-            } else {
-                request["label"] = wallet.label
-            }
-            
-            requests = [request]
-            paramDict["requests"] = requests
-            let param:Import_Descriptors = .init(paramDict)
-            
-            importDesc(param: param) { [weak self] success in
-                if success {
-                    self?.importDescriptors(index: index + 1, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
-                } else {
-                    self?.showError(error: "Error importing a recovery descriptor.")
-                }
-            }
-        } else {
-            self.updateMaxIndex(max: maxRange)
-            promptToRescan()
-        }
+//        if index < descriptorsToImport.count {
+//            updateSpinnerText(text: "importing descriptor #\(index + 1), \(maxRange - Int(wallet.maxIndex) + 1) public keys...")
+//            
+//            let descriptor = descriptorsToImport[index]
+//            var paramDict:[String:Any] = [:]
+//            var requests:[[String:Any]] = []
+//            var request:[String:Any] = [:]
+//            request["desc"] = descriptor
+//            request["range"] = [0, maxRange]
+//            request["timestamp"] = "now"
+//            request["next_index"] = Int(wallet.maxIndex) + 1
+//            
+//            if descriptor.contains(wallet.changeDescriptor) {
+//                request["internal"] = true
+//                
+//            } else {
+//                request["label"] = wallet.label
+//            }
+//            
+//            requests = [request]
+//            paramDict["requests"] = requests
+//            let param:Import_Descriptors = .init(paramDict)
+//            
+//            importDesc(param: param) { [weak self] success in
+//                if success {
+//                    self?.importDescriptors(index: index + 1, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
+//                } else {
+//                    self?.showError(error: "Error importing a recovery descriptor.")
+//                }
+//            }
+//        } else {
+//            self.updateMaxIndex(max: maxRange)
+//            promptToRescan()
+//        }
     }
     
     private func promptToRescan() {
@@ -1169,15 +1169,15 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
                 
                 self.updateSpinnerText(text: "starting a rescan...")
                 
-                OnchainUtils.rescan { [weak self] (started, message) in
-                    guard let self = self else { return }
-                    
-                    if started {
-                        self.spinner.removeConnectingView()
-                    } else {
-                        self.showError(error: "Error starting a rescan, your wallet has not been saved. Please check your connection to your node and try again.")
-                    }
-                }
+//                OnchainUtils.rescan { [weak self] (started, message) in
+//                    guard let self = self else { return }
+//                    
+//                    if started {
+//                        self.spinner.removeConnectingView()
+//                    } else {
+//                        self.showError(error: "Error starting a rescan, your wallet has not been saved. Please check your connection to your node and try again.")
+//                    }
+//                }
             }))
             
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
@@ -1186,11 +1186,11 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         }
     }
     
-    private func importDesc(param: Import_Descriptors, completion: @escaping ((Bool)) -> Void) {
-        OnchainUtils.importDescriptors(param) { (imported, _) in
-            completion(imported)
-        }
-    }
+//    private func importDesc(param: Import_Descriptors, completion: @escaping ((Bool)) -> Void) {
+////        OnchainUtils.importDescriptors(param) { (imported, _) in
+////            completion(imported)
+////        }
+//    }
     
     private func updateMaxIndex(max: Int) {
         CoreDataService.update(id: walletId, keyToUpdate: "maxIndex", newValue: Int64(max), entity: .wallets) { [weak self] success in

@@ -130,12 +130,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 isFiat = false
                 isSats = false
                 btcEnabled()
-            case "sats":
-                index = 1
-                isSats = true
-                isFiat = false
-                isBtc = false
-                satsSelected()
             case "fiat":
                 index = 2
                 isFiat = true
@@ -291,38 +285,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     private func getAddressFromWallet(_ wallet: Wallet) {
         spinner.addConnectingView(vc: self, description: "getting address...")
-        
-        func getFromFnWallet() {
-            let index = Int(wallet.index + 1)
-            let param:Derive_Addresses = .init(["descriptor": wallet.receiveDescriptor, "range": [index, index]])
-            OnchainUtils.deriveAddresses(param: param) { [weak self] (addresses, message) in
-                guard let self = self else { return }
-                self.spinner.removeConnectingView()
-                guard let addresses = addresses, !addresses.isEmpty else {
-                    showAlert(vc: self, title: "There was an issue getting an address from that wallet...", message: message ?? "Unknown error.")
-                    return
-                }
-                self.addAdressNow(address: addresses[0], wallet: wallet)
-            }
-        }
-        
-        if wallet.isJm {
-            self.getAddressFromJm(wallet: wallet)
-        } else {
-            getFromFnWallet()
-        }
-        
-//        guard let jmWallet = jmWallet else {
-//
-//            return
-//        }
-//
-//        if jmWallet.fnWallet == wallet.name {
-//
-//
-//        } else {
-//            getFromFnWallet()
-//        }
+        getAddressFromJm(wallet: wallet)
     }
     
     private func addAdressNow(address: String, wallet: Wallet) {
@@ -331,11 +294,11 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
             self.addAddress("\(address)")
             
-            OnchainUtils.getAddressInfo(address: address) { (addressInfo, message) in
-                guard let addressInfo = addressInfo else { return }
-                
-                showAlert(vc: self, title: "Address added ✓", message: "Derived from \(wallet.label): \(addressInfo.desc), solvable: \(addressInfo.solvable)")
-            }
+//            OnchainUtils.getAddressInfo(address: address) { (addressInfo, message) in
+//                guard let addressInfo = addressInfo else { return }
+//                
+//                showAlert(vc: self, title: "Address added ✓", message: "Derived from \(wallet.label): \(addressInfo.desc), solvable: \(addressInfo.solvable)")
+//            }
         }
     }
     
@@ -417,9 +380,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     @IBAction func pasteAction(_ sender: Any) {
         guard let item = UIPasteboard.general.string else { return }
         
-        if item.hasPrefix("lntb") || item.hasPrefix("lightning:") || item.hasPrefix("lnbc") || item.hasPrefix("lnbcrt") || item.hasPrefix("lno") {
-            decodeLighnting(invoice: item.replacingOccurrences(of: "lightning:", with: ""))
-        } else if item.hasPrefix("bitcoin:") || item.hasPrefix("BITCOIN:") {
+        if item.lowercased().hasPrefix("bitcoin:") {
             processBIP21(url: item)
         } else {
             switch item {
@@ -454,44 +415,37 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             return
         }
         
-        let lc = addressInput.lowercased()
+        guard let amount = convertedAmount() else {
+            if !self.outputs.isEmpty {
+                tryRaw()
+            } else {
+                spinner.removeConnectingView()
+                showAlert(vc: self, title: "", message: "No amount or address.")
+            }
+            return
+        }
         
-        if lc.hasPrefix("lntb") || lc.hasPrefix("lightning:") || lc.hasPrefix("lnbc") || lc.hasPrefix("lnbcrt") || lc.hasPrefix("lno") {
-            decodeLighnting(invoice: addressInput.lowercased().replacingOccurrences(of: "lightning:", with: ""))
-        } else {
+        switch coinSelectionControl.selectedSegmentIndex {
             
-            guard let amount = convertedAmount() else {
-                if !self.outputs.isEmpty {
-                    tryRaw()
-                } else {
-                    spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "No amount or address.")
-                }
-                return
+        case 0:
+            if isDirectSend {
+                self.chooseMixdepthToSpendFrom()
+                
+            } else if isJmarket {
+                guard let jmWallet = jmWallet else { return }
+                promptToCoinjoinWithJM(jmWallet: jmWallet, recipient: addressInput, amount: amount)
+            } else {
+                tryRaw()
             }
             
-            switch coinSelectionControl.selectedSegmentIndex {
-                
-            case 0:
-                if isDirectSend {
-                    self.chooseMixdepthToSpendFrom()
-                    
-                } else if isJmarket {
-                    guard let jmWallet = jmWallet else { return }
-                    promptToCoinjoinWithJM(jmWallet: jmWallet, recipient: addressInput, amount: amount)
-                } else {
-                    tryRaw()
-                }
-                
-            case 1:
-                self.createBlindNow(amount: amount.doubleValue, recipient: addressInput, strict: false)
-                
-            case 2:
-                self.createBlindNow(amount: amount.doubleValue, recipient: addressInput, strict: true)
-                
-            default:
-                break
-            }
+//            case 1:
+//                self.createBlindNow(amount: amount.doubleValue, recipient: addressInput, strict: false)
+//
+//            case 2:
+//                self.createBlindNow(amount: amount.doubleValue, recipient: addressInput, strict: true)
+            
+        default:
+            break
         }
     }
     
@@ -605,43 +559,30 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         promptToDirectSendWithJM(jmWallet: jmWallet, recipient: self.addressInput.text!, amount: sats, mixdepth: mixdepth)
     }
     
-    private func createBlindNow(amount: Double, recipient: String, strict: Bool) {
-        var type = ""
-        
-        if strict {
-            type = "coinjoin"
-        } else {
-            type = "blind"
-        }
-        
-        spinner.addConnectingView(vc: self, description: "creating \(type) psbt...")
-        
-        BlindPsbt.getInputs(amountBtc: amount, recipient: recipient, strict: strict, inputsToJoin: nil) { [weak self] (psbt, error) in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            if let error = error {
-                showAlert(vc: self, title: "There was an issue creating the \(type) psbt.", message: error)
-            } else if let psbt = psbt {
-                self.rawTxUnsigned = psbt
-                self.showRaw(raw: psbt)
-            }
-        }
-    }
-    
-    @IBAction func lightningWithdrawAction(_ sender: Any) {
-        guard let item = addressInput.text, item != "" else {
-            showAlert(vc: self, title: "", message: "Add a recipient address first.")
-            return
-        }
-        
-        if item.hasPrefix("lntb") || item.hasPrefix("lightning:") || item.hasPrefix("lnbc") || item.hasPrefix("lnbcrt") || item.hasPrefix("lno") {
-            decodeLighnting(invoice: item.replacingOccurrences(of: "lightning:", with: ""))
-        } else {
-            promptWithdrawalLightning(item)
-        }
-    }
+//    private func createBlindNow(amount: Double, recipient: String, strict: Bool) {
+//        var type = ""
+//        
+//        if strict {
+//            type = "coinjoin"
+//        } else {
+//            type = "blind"
+//        }
+//        
+//        spinner.addConnectingView(vc: self, description: "creating \(type) psbt...")
+//        
+////        BlindPsbt.getInputs(amountBtc: amount, recipient: recipient, strict: strict, inputsToJoin: nil) { [weak self] (psbt, error) in
+////            guard let self = self else { return }
+////            
+////            self.spinner.removeConnectingView()
+////            
+////            if let error = error {
+////                showAlert(vc: self, title: "There was an issue creating the \(type) psbt.", message: error)
+////            } else if let psbt = psbt {
+////                self.rawTxUnsigned = psbt
+////                self.showRaw(raw: psbt)
+////            }
+////        }
+//    }
     
     private func convertedAmount() -> String? {
         guard let amount = amountInput.text, amount != "" else { return nil }
@@ -731,196 +672,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         isJmarket = false
         isFidelity = false
     }
-        
-    private func promptWithdrawalLightning(_ recipient: String) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            var title = "Withdraw from lightning wallet?"
-            var mess = "This action will withdraw the amount specified to the given address from your lightning wallet"
-            
-            if self.amountInput.text == "" || self.amountInput.text == "0" || self.amountInput.text == "0.0" {
-                title = "Withdraw ALL onchain funds from your ⚡️ wallet?\n"
-                mess = "This action will withdraw the TOTAL available onchain amount from your lightning internal onchain wallet to:\n\n\(recipient)"
-            }
-            
-            let alert = UIAlertController(title: title, message: mess, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "Withdraw now", style: .default, handler: { action in
-                self.withdrawLightningSanity()
-            }))
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func withdrawLightningSanity() {
-        guard let amountString = amountInput.text, let address = addressInput.text, address != "" else {
-            showAlert(vc: self, title: "Oops", message: "Add an address first.")// add option to withdraw to onchain wallet too
-            return
-        }
-                
-        confirmLightningWithdraw(address, amountString.doubleValue)
-    }
-    
-    private func confirmLightningWithdraw(_ address: String, _ amount: Double) {
-        var title = ""
-        var sats = Int()
-        
-        let amountString = amountInput.text ?? ""
-        let dblAmount = amountString.doubleValue
-        
-        if amount > 0.0 {
-            if isFiat {
-                guard let fxRate = fxRate else { return }
-                let btcamount = rounded(number: amount / fxRate)
-                sats = Int(btcamount * 100000000.0)
-                title = "Withdraw $\(dblAmount) \(fiatCurrency) (\(sats) sats) from lightning wallet to \(address)?"
-                
-            } else if isSats {
-                sats = Int(dblAmount)
-                title = "Withdraw \(dblAmount) sats from lightning wallet to \(address)?"
-                
-            } else {
-                sats = Int(amount * 100000000.0)
-                title = "Withdraw \(amount.avoidNotation) btc (\(sats) sats) from lightning wallet to \(address)?"
-            }
-        } else {
-            sats = 0
-            title = "Sweep ALL funds from onchain lightning wallet?"
-        }
-                
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let alert = UIAlertController(title: title, message: "This action is not reversable!", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "Withdraw now", style: .default, handler: { action in
-                self.withdrawLightningNow(address: address, sats: sats)
-            }))
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func withdrawLightningNow(address: String, sats: Int) {
-        spinner.addConnectingView(vc: self, description: "withdrawing from lightning wallet...")
-        
-        isLndNode { [weak self] isLnd in
-            guard let self = self else { return }
-            
-            guard isLnd else {
-                self.withdrawFromCL(address: address, sats: sats)
-                
-                return
-            }
-            
-            self.withdrawFromLND(address: address, sats: sats)
-        }
-    }
-    
-    private func withdrawFromLND(address: String, sats: Int) {
-        let param:[String:Any] = ["addr": address,
-                                  "amount": "\(sats)",
-                                  "spend_unconfirmed": true,
-                                  "send_all": !(sats > 0)]
-        
-        LndRpc.sharedInstance.command(.sendcoins, param, nil, nil) { [weak self] (response, error) in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            guard let dict = response, let _ = dict["txid"] as? String else {
-                showAlert(vc: self, title: "Uh oh, somehting is not right", message: error ?? "unknow error")
-                return
-            }
-            
-            showAlert(vc: self, title: "Success ✓", message: "Lightning wallet withdraw to\n\n\(address)\n\ncompleted ⚡️")
-        }
-    }
-    
-    private func withdrawFromCL(address: String, sats: Int) {
-        var param:[String:Any] = ["destination":address, "satoshi":sats]
-        if sats == 0 {
-            param["satoshi"] = "all"
-        }
-        let commandId = UUID()
-        //destination satoshi [feerate] [minconf] [utxos]
-        LightningRPC.sharedInstance.command(id: commandId, method: .withdraw, param: param) { [weak self] (uuid, response, errorDesc) in
-            guard commandId == uuid, let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            guard let dict = response as? NSDictionary, let _ = dict["txid"] as? String else {
-                showAlert(vc: self, title: "Uh oh, somehting is not right", message: errorDesc ?? "unknow error")
-                return
-            }
-            
-            showAlert(vc: self, title: "Success ✓", message: "Lightning wallet withdraw to\n\n\(address)\n\ncompleted ⚡️")
-        }
-    }
-    
-    
-    @IBAction func fundLightning(_ sender: Any) {
-        spinner.addConnectingView(vc: self, description: "Fetching lightning funding address...")
-        
-        isLndNode(completion: { [weak self] isLnd in
-            guard let self = self else { return }
-            
-            guard isLnd else {
-                self.getCLAddress()
-                
-                return
-            }
-            
-            self.getLndAddress()
-        })
-    }
-    
-    private func getLndAddress() {
-        LndRpc.sharedInstance.command(.getnewaddress, nil, nil, nil) { [weak self] (response, error) in
-            guard let self = self else { return }
-            
-            guard let dict = response, let address = dict["addr"] as? String else {
-                spinner.removeConnectingView()
-                if let error = error {
-                    showAlert(vc: self, title: "", message: error)
-                } else {
-                    showAlert(vc: self, title: "", message: "No address returned.")
-                }
-                
-                return
-            }
-            
-            self.showFundingAddr(address)
-        }
-    }
-    
-    private func getCLAddress() {
-        let commandId = UUID()
-        LightningRPC.sharedInstance.command(id: commandId, method: .newaddr, param: nil) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self else { return }
-                        
-            guard let dict = response as? NSDictionary, let address = dict["bech32"] as? String else {
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "unknown error fetching lightning wallet address")
-                return
-            }
-            
-            self.showFundingAddr(address)
-        }
-    }
-    
-    private func showFundingAddr(_ addr: String) {
-        spinner.removeConnectingView()
-        
-        addAddress(addr)
-        
-        showAlert(
-            vc: self,
-            title: "⚡️ Lightning deposit address\n",
-            message: "This is an address controlled by your Lightning node's internal onchain wallet. You can use it to fund your lightning node to open channels.\n\nTo fund channels directly from your active Fully Noded wallet you can navigate home > tap the ⚡️ button > Channels > + (c-lightning only)."
-        )
-    }
     
     @IBAction func denominationChanged(_ sender: UISegmentedControl) {
         switch sender.selectedSegmentIndex {
@@ -931,12 +682,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             ud.set("btc", forKey: "unit")
             btcEnabled()
         case 1:
-            isFiat = false
-            isBtc = false
-            isSats = true
-            ud.set("sats", forKey: "unit")
-            satsSelected()
-        case 2:
             isFiat = true
             isBtc = false
             isSats = false
@@ -944,14 +689,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             fiatEnabled()
         default:
             break
-        }
-    }
-    
-    private func satsSelected() {
-        DispatchQueue.main.async { [unowned vc = self] in
-            vc.denominationImage.image = UIImage(systemName: "s.circle")
-            vc.amountIcon.backgroundColor = .systemPurple
-            vc.spinner.removeConnectingView()
         }
     }
     
@@ -1133,40 +870,40 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     }
     
     private func standardSweep(_ receivingAddress: String) {
-        var paramDict:[String:Any] = [:]
-        paramDict["inputs"] = inputs
-        paramDict["outputs"] = [[receivingAddress: "\(rounded(number: utxoTotal))"]]
-        paramDict["bip32derivs"] = true
-        
-        if let feeRate = UserDefaults.standard.object(forKey: "feeRate") as? Int {            
-            paramDict["options"] = ["includeWatching": true, "replaceable": true, "fee_rate": feeRate, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
-        } else {
-            paramDict["options"] = ["includeWatching": true, "replaceable": true, "conf_target": ud.object(forKey: "feeTarget") as? Int ?? 432, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
-        }
-        
-        let param:Wallet_Create_Funded_Psbt = .init(paramDict)
-        Reducer.sharedInstance.makeCommand(command: .walletcreatefundedpsbt(param: param)) { [weak self] (response, errorMessage) in
-            guard let self = self else { return }
-            
-            guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
-                self.spinner.removeConnectingView()
-                displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-                return
-            }
-            
-            let param_process:Wallet_Process_PSBT = .init(["psbt": psbt1])
-            Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: param_process)) { [weak self] (response, errorMessage) in
-                guard let self = self else { return }
-                
-                guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-                    return
-                }
-                
-                self.sign(psbt: processedPSBT)
-            }
-        }
+//        var paramDict:[String:Any] = [:]
+//        paramDict["inputs"] = inputs
+//        paramDict["outputs"] = [[receivingAddress: "\(rounded(number: utxoTotal))"]]
+//        paramDict["bip32derivs"] = true
+//        
+//        if let feeRate = UserDefaults.standard.object(forKey: "feeRate") as? Int {            
+//            paramDict["options"] = ["includeWatching": true, "replaceable": true, "fee_rate": feeRate, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
+//        } else {
+//            paramDict["options"] = ["includeWatching": true, "replaceable": true, "conf_target": ud.object(forKey: "feeTarget") as? Int ?? 432, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
+//        }
+//        
+//        let param:Wallet_Create_Funded_Psbt = .init(paramDict)
+//        Reducer.sharedInstance.makeCommand(command: .walletcreatefundedpsbt(param: param)) { [weak self] (response, errorMessage) in
+//            guard let self = self else { return }
+//            
+//            guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
+//                self.spinner.removeConnectingView()
+//                displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+//                return
+//            }
+//            
+//            let param_process:Wallet_Process_PSBT = .init(["psbt": psbt1])
+//            Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: param_process)) { [weak self] (response, errorMessage) in
+//                guard let self = self else { return }
+//                
+//                guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+//                    return
+//                }
+//                
+//                self.sign(psbt: processedPSBT)
+//            }
+//        }
     }
     
     private func sweepToMix(_ recipient: String) {
@@ -1239,115 +976,105 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             
         } else if isJmarket {
             sweepToMix(receivingAddress)
-        } else {
-            activeWallet { wallet in
-                if let wallet = wallet, wallet.isJm {
-                    self.jmWallet = wallet
-                    self.amount = "0"
-                    self.chooseMixdepthToSpendFrom()
-                } else {
-                    self.standardWalletSweep(receivingAddress)
-                }
-            }
         }
     }
     
-    private func standardWalletSweep(_ receivingAddress: String) {
-        let param: List_Unspent = .init(["minconf": 0])
-        OnchainUtils.listUnspent(param: param) { [weak self] (utxos, message) in
-            guard let self = self else { return }
-            
-            guard let utxos = utxos else {
-                self.spinner.removeConnectingView()
-                displayAlert(viewController: self, isError: true, message: message ?? "error fetching utxo's")
-                return
-            }
-            
-            var inputArray:[[String:Any]] = []
-            var amount = Double()
-            var spendFromCold = Bool()
-            
-            for utxo in utxos {
-                if !utxo.spendable! {
-                    spendFromCold = true
-                }
-                
-                amount += utxo.amount!
-                
-                guard utxo.confs! > 0 else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "You have unconfirmed utxo's, wait till they get a confirmation before trying to sweep them.")
-                    return
-                }
-                
-                inputArray.append(utxo.input)
-            }
-            
-            var paramDict:[String:Any] = [:]
-            var options:[String:Any] = [:]
-            paramDict["inputs"] = inputArray
-            paramDict["outputs"] = [[receivingAddress: "\((rounded(number: amount)))"]]
-            paramDict["bip32derivs"] = true
-            
-            options["includeWatching"] = spendFromCold
-            options["replaceable"] = true
-            options["subtractFeeFromOutputs"] = [0]
-            options["changeAddress"] = receivingAddress
-            
-            if let feeRate = UserDefaults.standard.object(forKey: "feeRate") as? Int {
-                options["fee_rate"] = feeRate
-            } else {
-                options["conf_target"] = self.ud.object(forKey: "feeTarget") as? Int ?? 432
-            }
-            
-            paramDict["options"] = options
-            
-            let param:Wallet_Create_Funded_Psbt = .init(paramDict)
-                        
-            Reducer.sharedInstance.makeCommand(command: .walletcreatefundedpsbt(param: param)) { [weak self] (response, errorMessage) in
-                guard let self = self else { return }
-                
-                guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
-                    self.spinner.removeConnectingView()
-                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-                    return
-                }
-                
-                let process_param: Wallet_Process_PSBT = .init(["psbt": psbt1])
-                Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: process_param)) { [weak self] (response, errorMessage) in
-                    guard let self = self else { return }
-                    
-                    guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
-                        self.spinner.removeConnectingView()
-                        displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-                        return
-                    }
-                    
-                    self.sign(psbt: processedPSBT)
-                }
-            }
-        }
-    }
+//    private func standardWalletSweep(_ receivingAddress: String) {
+//        let param: List_Unspent = .init(["minconf": 0])
+//        OnchainUtils.listUnspent(param: param) { [weak self] (utxos, message) in
+//            guard let self = self else { return }
+//            
+//            guard let utxos = utxos else {
+//                self.spinner.removeConnectingView()
+//                displayAlert(viewController: self, isError: true, message: message ?? "error fetching utxo's")
+//                return
+//            }
+//            
+//            var inputArray:[[String:Any]] = []
+//            var amount = Double()
+//            var spendFromCold = Bool()
+//            
+//            for utxo in utxos {
+//                if !utxo.spendable! {
+//                    spendFromCold = true
+//                }
+//                
+//                amount += utxo.amount!
+//                
+//                guard utxo.confs! > 0 else {
+//                    self.spinner.removeConnectingView()
+//                    showAlert(vc: self, title: "", message: "You have unconfirmed utxo's, wait till they get a confirmation before trying to sweep them.")
+//                    return
+//                }
+//                
+//                inputArray.append(utxo.input)
+//            }
+//            
+//            var paramDict:[String:Any] = [:]
+//            var options:[String:Any] = [:]
+//            paramDict["inputs"] = inputArray
+//            paramDict["outputs"] = [[receivingAddress: "\((rounded(number: amount)))"]]
+//            paramDict["bip32derivs"] = true
+//            
+//            options["includeWatching"] = spendFromCold
+//            options["replaceable"] = true
+//            options["subtractFeeFromOutputs"] = [0]
+//            options["changeAddress"] = receivingAddress
+//            
+//            if let feeRate = UserDefaults.standard.object(forKey: "feeRate") as? Int {
+//                options["fee_rate"] = feeRate
+//            } else {
+//                options["conf_target"] = self.ud.object(forKey: "feeTarget") as? Int ?? 432
+//            }
+//            
+//            paramDict["options"] = options
+//            
+//            let param:Wallet_Create_Funded_Psbt = .init(paramDict)
+//                        
+//            Reducer.sharedInstance.makeCommand(command: .walletcreatefundedpsbt(param: param)) { [weak self] (response, errorMessage) in
+//                guard let self = self else { return }
+//                
+//                guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
+//                    self.spinner.removeConnectingView()
+//                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+//                    return
+//                }
+//                
+//                let process_param: Wallet_Process_PSBT = .init(["psbt": psbt1])
+//                Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: process_param)) { [weak self] (response, errorMessage) in
+//                    guard let self = self else { return }
+//                    
+//                    guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
+//                        self.spinner.removeConnectingView()
+//                        displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+//                        return
+//                    }
+//                    
+//                    self.sign(psbt: processedPSBT)
+//                }
+//            }
+//        }
+//    }
     
-    private func sign(psbt: String) {
-        Signer.sign(psbt: psbt, passphrase: nil) { [weak self] (psbt, rawTx, errorMessage) in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            if rawTx != nil {
-                self.rawTxSigned = rawTx!
-                self.showRaw(raw: rawTx!)
-                
-            } else if psbt != nil {
-                self.rawTxUnsigned = psbt!
-                self.showRaw(raw: psbt!)
-                
-            } else if errorMessage != nil {
-                showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown signing error")
-            }
-        }
-    }
+//    private func sign(psbt: String) {
+//        Signer.sign(psbt: psbt, passphrase: nil) { [weak self] (psbt, rawTx, errorMessage) in
+//            guard let self = self else { return }
+//            
+//            self.spinner.removeConnectingView()
+//            
+//            if rawTx != nil {
+//                self.rawTxSigned = rawTx!
+//                self.showRaw(raw: rawTx!)
+//                
+//            } else if psbt != nil {
+//                self.rawTxUnsigned = psbt!
+//                self.showRaw(raw: psbt!)
+//                
+//            } else if errorMessage != nil {
+//                showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown signing error")
+//            }
+//        }
+//    }
     
     private func sweep() {
         guard let receivingAddress = addressInput.text,
@@ -1510,346 +1237,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     //MARK: Helpers
     
-    private func decodeLighnting(invoice: String) {
-        spinner.addConnectingView(vc: self, description: "decoding lightning invoice...")
-        
-        isLndNode { [weak self] isLnd in
-            guard let self = self else { return }
-            
-            guard isLnd else {
-                self.decodeFromCL(invoice)
-                return
-            }
-            
-            self.decodeFromLND(invoice)
-        }
-    }
     
-    private func decodeFromLND(_ invoice: String) {
-        LndRpc.sharedInstance.command(.decodepayreq, nil, invoice, nil) { [weak self] (response, error) in
-            guard let self = self else { return }
-            
-            guard let dict = response else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Error", message: error ?? "unknown error")
-                return
-            }
-            
-            if let numSatoshis = dict["num_satoshis"] as? String, numSatoshis != "0" {
-                self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: nil)
-                
-            } else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    guard let amountText = self.amountInput.text, amountText != "" else {
-                        self.spinner.removeConnectingView()
-                        showAlert(vc: self, title: "No amount specified.", message: "You need to enter an amount to send for an invoice that does not include one.")
-                        return
-                    }
-                    
-                    let dblAmount = amountText.doubleValue
-                    
-                    guard dblAmount > 0.0 else {
-                        self.spinner.removeConnectingView()
-                        showAlert(vc: self, title: "No amount specified.", message: "You need to enter an amount to send for an invoice that does not include one.")
-                        return
-                    }
-                    
-                    if self.isFiat {
-                        guard let fxRate = self.fxRate else { return }
-                        let btcamount = rounded(number: dblAmount / fxRate)
-                        let msats = Int(btcamount * 100000000000.0)
-                        self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: msats)
-                        
-                    } else if self.isSats {
-                        let msats = Int(dblAmount * 1000.0)
-                        self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: msats)
-                        
-                    } else {
-                        let msats = Int(dblAmount * 100000000000.0)
-                        self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: msats)
-                        
-                    }
-                }
-            }
-        }
-    }
-    
-    private func parseOffer(offer: String, amountMsat: Int?) {
-        var param:[String:Any] = ["offer": offer]
-        // fetchinvoice offer [amount_msat] [quantity] [recurrence_counter] [recurrence_start] [recurrence_label] [timeout] [payer_note]
-        if let amountMsat = amountMsat {
-            param["amount_msat"] = amountMsat
-            self.fetchInvoice(param: param)
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-
-                guard let amountText = self.amountInput.text, amountText != "" else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "No amount specified.", message: "You need to enter an amount to send for an invoice that does not include one.")
-                    return
-                }
-
-                guard let msats = self.getMsatAmount(amountText: amountText) else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "There was an issue converting the amount to msats.")
-                    return
-                }
-
-                param["amount_msat"] = msats
-                self.fetchInvoice(param: param)
-            }
-        }
-    }
-    
-    private func fetchInvoice(param: [String:Any]) {
-        let commandId = UUID()
-        var paramToUse:[String:Any] = param
-        
-        LightningRPC.sharedInstance.command(id: commandId, method: .fetchinvoice, param: param) { [weak self] (id, response, errorDesc) in
-            guard let self = self else { return }
-
-            guard let response = response as? [String:Any] else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "There was an issue fetching the invoice.", message: errorDesc ?? "Unknown error.")
-                return
-            }
-            guard let invoice = response["invoice"] as? String else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "There was an issue fetching the invoice.", message: "No invoice returned from fetchinvoice.")
-                return
-            }
-            
-            paramToUse["num_msat"] = param["amount_msat"]
-
-            self.promptToSendLightningPayment(invoice: invoice, dict: param, msat: nil)
-        }
-    }
-    
-    private func decodeFromCL(_ invoice: String) {
-        let commandId = UUID()
-        if invoice.hasPrefix("lno") {
-            LightningRPC.sharedInstance.command(id: commandId, method: .decode, param: [invoice]) { [weak self] (id, response, errorDesc) in
-                guard let self = self else { return }
-
-                guard let response = response as? [String:Any],
-                        let type = response["type"] as? String else {
-                    self.spinner.removeConnectingView()
-                    return
-                }
-                switch type {
-                case "bolt12 offer":
-                    // offer_amount_msat is a string
-                    if let msatAmount = response["offer_amount_msat"] as? Int {
-                        self.parseOffer(offer: invoice, amountMsat: msatAmount)
-                    } else if var msatAmount = response["offer_amount_msat"] as? String {
-                        msatAmount = msatAmount.replacingOccurrences(of: "msat", with: "")
-                        guard let msatAmountInt = Int(msatAmount) else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "", message: "Unable to convert Core Lightning msat string to int.")
-                            return
-                        }
-                        
-                        self.parseOffer(offer: invoice, amountMsat: msatAmountInt)
-                    }
-                    
-                default:
-                    break
-                }
-            }
-        } else {
-            LightningRPC.sharedInstance.command(id: commandId, method: .decodepay, param: ["bolt11": invoice]) { [weak self] (uuid, response, errorDesc) in
-                guard let self = self, commandId == uuid else { return }
-                
-                self.spinner.removeConnectingView()
-                
-                guard let dict = response as? [String:Any] else {
-                    showAlert(vc: self, title: "Error", message: errorDesc ?? "unknown error")
-                    return
-                }
-                
-                if let _ = dict["msatoshi"] as? Int {
-                    self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: nil)
-                    
-                } else {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        
-                        guard let amountText = self.amountInput.text, amountText != "" else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "No amount specified.", message: "You need to enter an amount to send for an invoice that does not include one.")
-                            return
-                        }
-                        
-                        guard let msats = self.getMsatAmount(amountText: amountText) else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "", message: "There was an issue converting the amount to msats.")
-                            return
-                        }
-                        
-                        self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: msats)
-                        
-                        let dblAmount = amountText.doubleValue
-
-                        guard dblAmount > 0.0 else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "No amount specified.", message: "You need to enter an amount to send for an invoice that does not include one.")
-                            return
-                        }
-
-                        if self.isFiat {
-                            guard let fxRate = self.fxRate else { return }
-                            let btcamount = rounded(number: dblAmount / fxRate)
-                            let msats = Int(btcamount * 100000000000.0)
-
-
-                        } else if self.isSats {
-                            let msats = Int(dblAmount * 1000.0)
-                            self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: msats)
-
-                        } else {
-                            let msats = Int(dblAmount * 100000000000.0)
-                            self.promptToSendLightningPayment(invoice: invoice, dict: dict, msat: msats)
-
-                        }
-                    }
-                }
-            }
-       }
-    }
-    
-    private func getMsatAmount(amountText: String) -> Int? {
-        let dblAmount = amountText.doubleValue
-        
-        guard dblAmount > 0.0 else {
-            self.spinner.removeConnectingView()
-            showAlert(vc: self, title: "No amount specified.", message: "You need to enter an amount to send for an invoice that does not include one.")
-            return nil
-        }
-        
-        if self.isFiat {
-            guard let fxRate = self.fxRate else { return nil }
-            let btcamount = rounded(number: dblAmount / fxRate)
-            return Int(btcamount * 100000000000.0)
-            
-        } else if self.isSats {
-            return Int(dblAmount * 1000.0)
-            
-        } else {
-            return Int(dblAmount * 100000000000.0)
-        }
-    }
-    
-    private func promptToSendLightningPayment(invoice: String, dict: [String:Any], msat: Int?) {
-        FiatConverter.sharedInstance.getFxRate { [weak self] fxRate in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.fxRate = fxRate
-                self.invoice = dict
-                if let msat = msat {
-                    self.invoice!["userSpecifiedAmount"] = "\(msat)"
-                }
-                self.invoiceString = invoice
-                self.performSegue(withIdentifier: "segueToLightningConf", sender: self)
-            }
-        }
-    }
-    
-    private func payLightningNow(invoice: String, msat: Int?, dict: [String:Any]) {
-        isLndNode { [weak self] isLnd in
-            guard let self = self else { return }
-            
-            guard isLnd else {
-                self.payFromCL(invoice: invoice, msat: msat, dict: dict)
-                return
-            }
-            
-            self.payFromLNDViaRoutes(invoice: invoice, msat: msat, dict: dict)
-        }
-    }
-    
-    private func payFromLNDViaRoutes(invoice: String, msat: Int?, dict: [String:Any]) {
-        var amount = dict["num_satoshis"] as? String ?? "0"
-        if let msat = msat {
-            amount = "\(Int(Double(msat) / 1000.0))"
-        }
-        let destination = dict["destination"] as? String ?? ""
-        let paymentHash = dict["payment_hash"] as? String ?? ""
-        let paymentHashData = Data(hexString: paymentHash)!.base64EncodedString()
-        let ext = "\(destination)/\(amount)"
-        let query:[String:Any] = ["fee_limit.percent":"1"]
-        
-        LndRpc.sharedInstance.command(.queryroutes, nil, ext, query) { [weak self] (response, error) in
-            guard let self = self else { return }
-
-            guard let routes = response?["routes"] as? NSArray, routes.count > 0 else {
-                self.index = 0
-                self.payInvoiceLND(invoice: invoice, sats: Int(amount)!, dict: dict)
-                return
-            }
-
-            let lnrpcRouteToTry = routes[self.index]
-
-            let param:[String:Any] = ["route": lnrpcRouteToTry, "payment_hash": paymentHashData]
-            
-            LndRpc.sharedInstance.command(.routepayment, param, nil, nil) { [weak self] (response, error) in
-                guard let self = self else { return }
-
-                guard let response = response else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "There was an issue...", message: error ?? "Unknown error.")
-                    return
-                }
-
-                if let payment_error = response["payment_error"] as? String, payment_error != "" {
-                    if routes.count < self.index {
-                        self.index += 1
-                        self.payFromLNDViaRoutes(invoice: invoice, msat: msat, dict: dict)
-                    } else {
-                        self.index = 0
-                        self.payInvoiceLND(invoice: invoice, sats: Int(amount)!, dict: dict)
-                    }
-                } else if let _ = response["payment_preimage"] as? String {
-                    let route = response["payment_route"] as! [String:Any]
-                    let feesSat = (route["total_fees_msat"] as! String).msatToSat
-                    self.saveTx(memo: dict["description"] as? String ?? "no memo", hash: dict["payment_hash"] as! String, sats: Int(amount)!, fee: feesSat)
-                }
-            }
-        }
-    }
-    
-    private func payInvoiceLND(invoice: String, sats: Int, dict: [String:Any]) {
-        let param:[String:Any] = ["payment_request":invoice,"fee_limit":["percent":"1"], "allow_self_payment":true, "amt": "\(sats)"]
-        
-        LndRpc.sharedInstance.command(.payinvoice, param, nil, nil) { [weak self] (response, error) in
-            guard let self = self else { return }
-
-            guard let response = response else {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "There was an issue...", message: error ?? "Unknown error.")
-                return
-            }
-            
-            if let payment_error = response["payment_error"] as? String, payment_error != "" {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "Payment Error", message: payment_error)
-            } else if let _ = response["payment_preimage"] as? String {
-                
-                let route = response["payment_route"] as! [String:Any]
-                let feesSat = (route["total_fees_msat"] as! String).msatToSat
-                
-                self.saveTx(memo: dict["description"] as? String ?? "no memo", hash: dict["payment_hash"] as! String, sats: sats, fee: feesSat)
-            } else if let message = response["message"] as? String {
-                self.spinner.removeConnectingView()
-                showAlert(vc: self, title: "There was an issue...", message: message)
-            }
-        }
-    }
     
     private func saveTx(memo: String, hash: String, sats: Int, fee: Double?) {
         FiatConverter.sharedInstance.getFxRate { [weak self] fxRate in
@@ -1883,58 +1271,16 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func payFromCL(invoice: String, msat: Int?, dict: [String:Any]) {
-        //bolt11 [msatoshi] [label] [riskfactor] [maxfeepercent] [retry_for] [maxdelay] [exemptfee] [localinvreqid] [exclude] [maxfee] [description]
-        var param:[String:Any] = [:]
-        param["invoice"] = invoice
-        if let msat = msat {
-            param["msatoshi"] = msat
-        }
-        
-        let memo = dict["description"] as? String ?? "no memo added"
-        param["label"] = memo
-        let payment_hash = dict["payment_hash"] as? String ?? ""
-        
-        let commandId = UUID()
-        
-        LightningRPC.sharedInstance.command(id: commandId, method: .pay, param: param) { [weak self] (uuid, response, errorDesc) in
-            guard let self = self, commandId == uuid else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            guard let dict = response as? NSDictionary else {
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "unknown error")
-                return
-            }
-            
-            guard let status = dict["status"] as? String, status == "complete" else {
-                if let message = dict["message"] as? String {
-                    showAlert(vc: self, title: "Message", message: message)
-                } else {
-                    showAlert(vc: self, title: "Error", message: errorDesc ?? "unknown error")
-                }
-                return
-            }
-            
-            guard let msatInt = dict["msatoshi"] as? Int, let msatSentInt = dict["msatoshi_sent"] as? Int else {
-                showAlert(vc: self, title: "Error", message: errorDesc ?? "error converting amounts")
-                return
-            }
-            
-            let fee = Double((msatSentInt - msatInt)) / 1000.0
-            
-            self.saveTx(memo: memo, hash: payment_hash, sats: Int(Double(msatSentInt) / 1000.0), fee: fee)            
-        }
-    }
+    
     
     private func estimateSmartFee() {
-        NodeLogic.estimateSmartFee { (response, errorMessage) in
-            guard let response = response, let feeRate = response["feeRate"] as? String else { return }
-            
-            DispatchQueue.main.async {
-                self.satPerByteLabel.text = "\(feeRate)"
-            }
-        }
+//        NodeLogic.estimateSmartFee { (response, errorMessage) in
+//            guard let response = response, let feeRate = response["feeRate"] as? String else { return }
+//            
+//            DispatchQueue.main.async {
+//                self.satPerByteLabel.text = "\(feeRate)"
+//            }
+//        }
     }
     
     private func showFeeSetting() {
@@ -1985,45 +1331,8 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     }
     
     func getRawTx() {
-        
-        func createNow() {
-            CreatePSBT.create(inputs: self.inputs, outputs: self.outputs) { [weak self] (psbt, rawTx, errorMessage) in
-                guard let self = self else { return }
-                
-                self.spinner.removeConnectingView()
-                
-                if rawTx != nil {
-                    self.rawTxSigned = rawTx!
-                    self.showRaw(raw: rawTx!)
-                
-                } else if psbt != nil {
-                    self.rawTxUnsigned = psbt!
-                    self.showRaw(raw: psbt!)
-                                    
-                } else {
-                    self.outputs.removeAll()
-                    DispatchQueue.main.async {
-                        self.outputsTable.reloadData()
-                    }
-                    
-                    showAlert(vc: self, title: "Error", message: errorMessage ?? "unknown error creating transaction")
-                }
-            }
-        }
-        
-        activeWallet { wallet in
-            guard let wallet = wallet else {
-                createNow()
-                return
-            }
-            
-            if wallet.isJm {
-                self.jmWallet = wallet
-                self.chooseMixdepthToSpendFrom()
-            } else {
-                createNow()
-            }
-        }
+        //self.jmWallet = wallet
+        self.chooseMixdepthToSpendFrom()
     }
         
     func textFieldDidBeginEditing(_ textField: UITextField) {
@@ -2057,12 +1366,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                     guard let addrss = addrss else { return }
                     
                     DispatchQueue.main.async { [unowned thisVc = self] in
-                        let potentialLightning = addrss.lowercased()
-                        if potentialLightning.hasPrefix("lntb") || potentialLightning.hasPrefix("lightning:") || potentialLightning.hasPrefix("lnbc") || potentialLightning.hasPrefix("lnbcrt"), potentialLightning.hasPrefix("lno") {
-                            thisVc.decodeLighnting(invoice: potentialLightning.replacingOccurrences(of: "lightning:", with: ""))
-                        } else {
-                            thisVc.processBIP21(url: addrss)
-                        }
+                        thisVc.processBIP21(url: addrss)
                     }
                 }
             }
@@ -2076,31 +1380,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 vc.signedRawTx = rawTxSigned
             } else if rawTxUnsigned != "" {
                 vc.unsignedPsbt = rawTxUnsigned
-            }
-            
-        case "segueToLightningConf":
-            guard let vc = segue.destination as? ConfirmLightningPaymentViewController else { fallthrough }
-            
-            vc.fxRate = self.fxRate
-            vc.invoice = self.invoice
-            self.spinner.removeConnectingView()
-            
-            vc.doneBlock = { [weak self] confirmed in
-                guard let self = self else { return }
-                
-                if confirmed {
-                    self.spinner.addConnectingView(vc: self, description: "paying lightning invoice...")
-                    
-                    if let userSpecifiedAmount = self.invoice!["userSpecifiedAmount"] as? String {
-                        self.payLightningNow(invoice: self.invoiceString, msat: Int(userSpecifiedAmount)!, dict: self.invoice!)
-                    } else {
-                        self.payLightningNow(invoice: self.invoiceString, msat: nil, dict: self.invoice!)
-                    }
-                    
-                } else {
-                    self.invoice = nil
-                    self.invoiceString = ""
-                }
             }
             
         default:
