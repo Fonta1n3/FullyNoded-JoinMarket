@@ -39,27 +39,20 @@ public func decryptedValue(_ encryptedValue: Data) -> String {
 
 /// Call this method to retrive active wallet. This method seaches the device's storage. NOT the node.
 /// - Parameter completion: Active wallet
-public func activeWallet(completion: @escaping ((Wallet?)) -> Void) {
-    guard let activeWalletName = UserDefaults.standard.object(forKey: "walletName") as? String else {
-        completion(nil)
-        return
-    }
-    
-    CoreDataService.retrieveEntity(entityName: .wallets) { walletDictionaries in
+public func activeWallet(completion: @escaping ((JMWallet?)) -> Void) {
+    CoreDataService.retrieveEntity(entityName: .jmWallets) { walletDictionaries in
         guard let walletDictionaries = walletDictionaries, !walletDictionaries.isEmpty else {
             completion(nil)
             return
         }
         
-        var foundWallet: Wallet?
+        var foundWallet: JMWallet?
         
         for walletDictionary in walletDictionaries where foundWallet == nil {
-            if walletDictionary["id"] != nil {
-                let wallet = Wallet(dictionary: walletDictionary)
-                
-                if wallet.name == activeWalletName {
-                    foundWallet = wallet
-                }
+            let wallet = JMWallet(walletDictionary)
+            
+            if wallet.active {
+                foundWallet = wallet
             }
         }
         

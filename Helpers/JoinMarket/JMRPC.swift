@@ -29,8 +29,13 @@ class JMRPC {
         CoreDataService.retrieveEntity(entityName: .newNodes) { [weak self] nodes in
             guard let self = self else { return }
             
-            guard let nodes = nodes, nodes.count > 0 else {
-                completion((nil, "error getting nodes from core data"))
+            guard let nodes = nodes else {
+                completion((nil, "Error getting nodes from core data"))
+                return
+            }
+            
+            guard nodes.count > 0 else {
+                completion((nil, "No nodes added."))
                 return
             }
             
@@ -39,17 +44,7 @@ class JMRPC {
             for node in nodes {
                 let n = NodeStruct(dictionary: node)
                 if n.isActive {
-                    if n.isNostr {
-                        self.isNostr = true
-                        activeNode = n
-                    } else {
-                        if !n.isLightning, n.isJoinMarket {
-                            if n.isActive {
-                                activeNode = n
-                            }
-                        }
-                    }
-                    
+                    activeNode = n
                 }
             }
             
@@ -99,7 +94,7 @@ class JMRPC {
                     .listutxos(jmWallet: let wallet):
                 httpMethod = "GET"
                 
-                guard let decryptedToken = Crypto.decrypt(wallet.token!),
+                guard let decryptedToken = Crypto.decrypt(wallet.token),
                       let token = decryptedToken.utf8String else {
                     completion((nil, "Unable to decrypt token."))
                     return
@@ -107,17 +102,10 @@ class JMRPC {
                 self.token = token
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 
-            case .unlockwallet(jmWallet: let wallet):
+            case .unlockwallet(jmWallet: let wallet, let password):
                 httpMethod = "POST"
                 timeout = 1000
-                
-                guard let decryptedPassword = Crypto.decrypt(wallet.password!),
-                      let password = decryptedPassword.utf8String else {
-                    completion((nil, "Unable to decrypt password."))
-                    return
-                }
-                
-                paramToUse = ["password":password]
+                paramToUse = ["password": password]
                 
             case .walletcreate:
                 httpMethod = "POST"
@@ -132,7 +120,7 @@ class JMRPC {
                 
                 httpMethod = "POST"
                 
-                guard let decryptedToken = Crypto.decrypt(wallet.token!),
+                guard let decryptedToken = Crypto.decrypt(wallet.token),
                       let token = decryptedToken.utf8String else {
                     completion((nil, "Unable to decrypt token."))
                     return
@@ -143,7 +131,7 @@ class JMRPC {
             case .gettimelockaddress(jmWallet: let wallet, date: _):
                 httpMethod = "GET"
                 
-                guard let decryptedToken = Crypto.decrypt(wallet.token!),
+                guard let decryptedToken = Crypto.decrypt(wallet.token),
                       let token = decryptedToken.utf8String else {
                     completion((nil, "Unable to decrypt token."))
                     return
@@ -168,8 +156,8 @@ class JMRPC {
             
 #if DEBUG
             print("url = \(url)")
-            print("httpMethod = \(httpMethod)")
-            print("self.token = \(self.token)")
+            print("httpMethod = \(String(describing: httpMethod))")
+            print("self.token = \(String(describing: self.token))")
             print("httpBody = \(paramToUse)")
 #endif
             

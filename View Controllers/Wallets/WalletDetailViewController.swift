@@ -12,7 +12,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     
     @IBOutlet weak var detailTable: UITableView!
     var walletId:UUID!
-    var wallet:Wallet!
+    var wallet:JMWallet!
     var signer = ""
     var spinner = ConnectingView()
     var coinType = "0"
@@ -101,26 +101,26 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     
     
     private func exportJson() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let fileManager = FileManager.default
-            let fileURL = fileManager.temporaryDirectory.appendingPathComponent("\(self.wallet.label).wallet")
-            
-            try? self.json.dataUsingUTF8StringEncoding.write(to: fileURL)
-            
-            if #available(iOS 14, *) {
-                let controller = UIDocumentPickerViewController(forExporting: [fileURL]) // 5
-                self.present(controller, animated: true)
-            } else {
-                let controller = UIDocumentPickerViewController(url: fileURL, in: .exportToService)
-                self.present(controller, animated: true)
-            }
-        }
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            
+//            let fileManager = FileManager.default
+//            let fileURL = fileManager.temporaryDirectory.appendingPathComponent("\(self.wallet.label).wallet")
+//            
+//            try? self.json.dataUsingUTF8StringEncoding.write(to: fileURL)
+//            
+//            if #available(iOS 14, *) {
+//                let controller = UIDocumentPickerViewController(forExporting: [fileURL]) // 5
+//                self.present(controller, animated: true)
+//            } else {
+//                let controller = UIDocumentPickerViewController(url: fileURL, in: .exportToService)
+//                self.present(controller, animated: true)
+//            }
+//        }
     }
     
     private func getAddresses() {
-        deriveAddresses(wallet.receiveDescriptor)
+        //deriveAddresses(wallet.receiveDescriptor)
     }
     
     private func deriveAddresses(_ descriptor: String) {
@@ -172,95 +172,95 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
             guard let self = self, let wallets = wallets, wallets.count > 0 else { return }
             
-            for w in wallets {
-                if w["id"] != nil {
-                    let walletStruct = Wallet(dictionary: w)
-                    if walletStruct.id == self.walletId {
-                        self.wallet = walletStruct
-                        
-                        if self.wallet.receiveDescriptor.contains("xpub") || self.wallet.receiveDescriptor.contains("xprv") {
-                            self.coinType = "0"
-                        } else {
-                            self.coinType = "1"
-                        }
-                        
-                        guard let json = CreateAccountMap.create(wallet: self.wallet) else {
-                            showAlert(vc: self, title: "", message: "Unable to derive account map.")
-                            return
-                        }
-                        
-                        self.json = json
-                        
-                        let generator = QRGenerator()
-                        generator.textInput = self.json
-                        self.backupText = self.json
-                        self.backupQrImage = generator.getQRCode()
-                        
-                        guard self.wallet.receiveDescriptor != "" else {
-                            showAlert(vc: self, title: "", message: "Unable to get receiev descriptor")
-                            return
-                        }
-                        
-                        if let urOutput = URHelper.descriptorToUrOutput(Descriptor(self.wallet.receiveDescriptor)) {
-                            generator.textInput = urOutput.uppercased()
-                            self.outputDescUr = urOutput.uppercased()
-                            self.exportWalletImageCryptoOutput = generator.getQRCode()
-                        } else {
-                            showAlert(vc: self, title: "", message: "Unable to convert your wallet to crypto-output.")
-                        }
-                                                
-                        let receiveDescriptor = Descriptor(walletStruct.receiveDescriptor)
-                        var keysText = ""
-                        var deriv = ""
-                        
-                        if receiveDescriptor.isMulti {
-                            let xfpArray = xfpArray(xfpString: receiveDescriptor.fingerprint)
-                            
-                            for (i, key) in receiveDescriptor.multiSigKeys.enumerated() {
-                                keysText += "\(xfpArray[i].condenseWhitespace()):\(key)\n\n"
-                            }
-                            
-                            let multisigDervArr = receiveDescriptor.derivationArray
-                            let allItemsEqual = multisigDervArr.dropLast().allSatisfy { $0 == multisigDervArr.last }
-                            
-                            if allItemsEqual {
-                                deriv = multisigDervArr[0]
-                            } else {
-                                deriv = "Multiple derivations!"
-                            }
-                        } else {
-                            keysText = receiveDescriptor.fingerprint + ":" + receiveDescriptor.accountXpub
-                            deriv = receiveDescriptor.derivation
-                        }
-                        
-                        backupFileText = """
-                        Name: \(wallet.label)
-                        Policy: \(receiveDescriptor.mOfNType)
-                        Derivation: \(deriv)
-                        Format: \(receiveDescriptor.format)
-                        
-                        \(keysText)
-                        """
-                        
-                        guard let urBytesCheck = URHelper.dataToUrBytes(backupFileText.utf8) else {
-                            showAlert(vc: self, title: "Error", message: "Unable to convert the text into a UR.")
-                            return
-                        }
-                        
-                        urBytes = urBytesCheck.qrString
-                        generator.textInput = urBytes
-                        self.exportWalletImageURBytes = generator.getQRCode()
-                        
-                        bbqrText = wallet.receiveDescriptor
-                        generator.textInput = bbqrText
-                        exportWalletImageBBQr = generator.getQRCode()
-                        
-                        //self.findSigner()
-                        self.getAddresses()
-                        spinner.removeConnectingView()
-                    }
-                }
-            }
+//            for w in wallets {
+//                if w["id"] != nil {
+//                    let walletStruct = JMWallet(dictionary: w)
+//                    if walletStruct.id == self.walletId {
+//                        self.wallet = walletStruct
+//                        
+//                        if self.wallet.receiveDescriptor.contains("xpub") || self.wallet.receiveDescriptor.contains("xprv") {
+//                            self.coinType = "0"
+//                        } else {
+//                            self.coinType = "1"
+//                        }
+//                        
+//                        guard let json = CreateAccountMap.create(wallet: self.wallet) else {
+//                            showAlert(vc: self, title: "", message: "Unable to derive account map.")
+//                            return
+//                        }
+//                        
+//                        self.json = json
+//                        
+//                        let generator = QRGenerator()
+//                        generator.textInput = self.json
+//                        self.backupText = self.json
+//                        self.backupQrImage = generator.getQRCode()
+//                        
+//                        guard self.wallet.receiveDescriptor != "" else {
+//                            showAlert(vc: self, title: "", message: "Unable to get receiev descriptor")
+//                            return
+//                        }
+//                        
+//                        if let urOutput = URHelper.descriptorToUrOutput(Descriptor(self.wallet.receiveDescriptor)) {
+//                            generator.textInput = urOutput.uppercased()
+//                            self.outputDescUr = urOutput.uppercased()
+//                            self.exportWalletImageCryptoOutput = generator.getQRCode()
+//                        } else {
+//                            showAlert(vc: self, title: "", message: "Unable to convert your wallet to crypto-output.")
+//                        }
+//                                                
+//                        let receiveDescriptor = Descriptor(walletStruct.receiveDescriptor)
+//                        var keysText = ""
+//                        var deriv = ""
+//                        
+//                        if receiveDescriptor.isMulti {
+//                            let xfpArray = xfpArray(xfpString: receiveDescriptor.fingerprint)
+//                            
+//                            for (i, key) in receiveDescriptor.multiSigKeys.enumerated() {
+//                                keysText += "\(xfpArray[i].condenseWhitespace()):\(key)\n\n"
+//                            }
+//                            
+//                            let multisigDervArr = receiveDescriptor.derivationArray
+//                            let allItemsEqual = multisigDervArr.dropLast().allSatisfy { $0 == multisigDervArr.last }
+//                            
+//                            if allItemsEqual {
+//                                deriv = multisigDervArr[0]
+//                            } else {
+//                                deriv = "Multiple derivations!"
+//                            }
+//                        } else {
+//                            keysText = receiveDescriptor.fingerprint + ":" + receiveDescriptor.accountXpub
+//                            deriv = receiveDescriptor.derivation
+//                        }
+//                        
+//                        backupFileText = """
+//                        Name: \(wallet.label)
+//                        Policy: \(receiveDescriptor.mOfNType)
+//                        Derivation: \(deriv)
+//                        Format: \(receiveDescriptor.format)
+//                        
+//                        \(keysText)
+//                        """
+//                        
+//                        guard let urBytesCheck = URHelper.dataToUrBytes(backupFileText.utf8) else {
+//                            showAlert(vc: self, title: "Error", message: "Unable to convert the text into a UR.")
+//                            return
+//                        }
+//                        
+//                        urBytes = urBytesCheck.qrString
+//                        generator.textInput = urBytes
+//                        self.exportWalletImageURBytes = generator.getQRCode()
+//                        
+//                        bbqrText = wallet.receiveDescriptor
+//                        generator.textInput = bbqrText
+//                        exportWalletImageBBQr = generator.getQRCode()
+//                        
+//                        //self.findSigner()
+//                        self.getAddresses()
+//                        spinner.removeConnectingView()
+//                    }
+//                }
+//            }
         }
     }
     
@@ -285,93 +285,93 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
 //    }
     
     private func parseSigners(_ signers: [[String:Any]]) {
-        for (i, signer) in signers.enumerated() {
-            let signerStruct = SignerStruct(dictionary: signer)
-            
-            if let encryptedWords = signerStruct.words {
-                guard let decryptedData = Crypto.decrypt(encryptedWords) else { return }
-                
-                parseWords(decryptedData, signerStruct)
-            }
-            
-            if i + 1 == signers.count {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.detailTable.reloadData()
-                }
-            }
-        }
+//        for (i, signer) in signers.enumerated() {
+//            let signerStruct = SignerStruct(dictionary: signer)
+//            
+//            if let encryptedWords = signerStruct.words {
+//                guard let decryptedData = Crypto.decrypt(encryptedWords) else { return }
+//                
+//                parseWords(decryptedData, signerStruct)
+//            }
+//            
+//            if i + 1 == signers.count {
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.detailTable.reloadData()
+//                }
+//            }
+//        }
     }
     
-    private func parseWords(_ decryptedData: Data, _ signer: SignerStruct) {
-        let descriptor = Descriptor(self.wallet.receiveDescriptor)
-        guard let words = String(bytes: decryptedData, encoding: .utf8) else { return }
-        
-        if signer.passphrase != nil {
-            parsePassphrase(words, signer.passphrase!, descriptor, signer)
-        } else {
-            guard let masterKey = Keys.masterKey(words: words, coinType: self.coinType, passphrase: "") else { return }
-            
-            self.crossCheckXpubs(descriptor, masterKey, words, signer)
-        }
-    }
+//    private func parseWords(_ decryptedData: Data, _ signer: SignerStruct) {
+//        let descriptor = Descriptor(self.wallet.receiveDescriptor)
+//        guard let words = String(bytes: decryptedData, encoding: .utf8) else { return }
+//        
+//        if signer.passphrase != nil {
+//            parsePassphrase(words, signer.passphrase!, descriptor, signer)
+//        } else {
+//            guard let masterKey = Keys.masterKey(words: words, coinType: self.coinType, passphrase: "") else { return }
+//            
+//            self.crossCheckXpubs(descriptor, masterKey, words, signer)
+//        }
+//    }
     
-    private func parsePassphrase(_ words: String, _ passphrase: Data, _ descriptor: Descriptor, _ signerStr: SignerStruct) {
-        guard let decryptedPass = Crypto.decrypt(passphrase),
-            let pass = String(bytes: decryptedPass, encoding: .utf8),
-            let masterKey = Keys.masterKey(words: words, coinType: coinType, passphrase: pass) else {
-            return
-        }
-        
-        crossCheckXpubs(descriptor, masterKey, words, signerStr)
-    }
+//    private func parsePassphrase(_ words: String, _ passphrase: Data, _ descriptor: Descriptor, _ signerStr: SignerStruct) {
+//        guard let decryptedPass = Crypto.decrypt(passphrase),
+//            let pass = String(bytes: decryptedPass, encoding: .utf8),
+//            let masterKey = Keys.masterKey(words: words, coinType: coinType, passphrase: pass) else {
+//            return
+//        }
+//        
+//        crossCheckXpubs(descriptor, masterKey, words, signerStr)
+//    }
     
-    private func crossCheckXpubs(_ descriptor: Descriptor, _ masterKey: String, _ words: String, _ signerStr: SignerStruct) {
-        if descriptor.isMulti {
-            for (x, xpub) in descriptor.multiSigKeys.enumerated() {
-                if let derivedXpub = Keys.xpub(path: descriptor.derivationArray[x], masterKey: masterKey) {
-                    if xpub == derivedXpub {
-                        guard let fingerprint = Keys.fingerprint(masterKey: masterKey) else { return }
-                        
-                        var toDisplay = fingerprint
-                        
-                        if fingerprint != signerStr.label {
-                            toDisplay += ":" + " \(signerStr.label)"
-                        }
-                        
-                        self.signer += toDisplay + "\n\n"
-                    }
-                }                
-            }
-        } else {
-            if let derivedXpub = Keys.xpub(path: descriptor.derivation, masterKey: masterKey) {
-                if descriptor.accountXpub == derivedXpub {
-                    guard let fingerprint = Keys.fingerprint(masterKey: masterKey) else { return }
-                    
-                    var toDisplay = fingerprint
-                    
-                    if fingerprint != signerStr.label {
-                        toDisplay += ":" + " \(signerStr.label)"
-                    }
-                    
-                    self.signer += toDisplay + "\n\n"
-                }
-            }
-        }
-    }
+//    private func crossCheckXpubs(_ descriptor: Descriptor, _ masterKey: String, _ words: String, _ signerStr: SignerStruct) {
+//        if descriptor.isMulti {
+//            for (x, xpub) in descriptor.multiSigKeys.enumerated() {
+//                if let derivedXpub = Keys.xpub(path: descriptor.derivationArray[x], masterKey: masterKey) {
+//                    if xpub == derivedXpub {
+//                        guard let fingerprint = Keys.fingerprint(masterKey: masterKey) else { return }
+//                        
+//                        var toDisplay = fingerprint
+//                        
+//                        if fingerprint != signerStr.label {
+//                            toDisplay += ":" + " \(signerStr.label)"
+//                        }
+//                        
+//                        self.signer += toDisplay + "\n\n"
+//                    }
+//                }                
+//            }
+//        } else {
+//            if let derivedXpub = Keys.xpub(path: descriptor.derivation, masterKey: masterKey) {
+//                if descriptor.accountXpub == derivedXpub {
+//                    guard let fingerprint = Keys.fingerprint(masterKey: masterKey) else { return }
+//                    
+//                    var toDisplay = fingerprint
+//                    
+//                    if fingerprint != signerStr.label {
+//                        toDisplay += ":" + " \(signerStr.label)"
+//                    }
+//                    
+//                    self.signer += toDisplay + "\n\n"
+//                }
+//            }
+//        }
+//    }
     
-    private func accountXpub() -> String {
-        if wallet.receiveDescriptor != "" {
-            let desc = wallet.receiveDescriptor
-            let arr = desc.split(separator: "]")
-            let xpubWithPath = "\(arr[1])"
-            let arr2 = xpubWithPath.split(separator: "/")
-            return "\(arr2[0])"
-        } else {
-            return ""
-        }
-    }
+//    private func accountXpub() -> String {
+//        if wallet.receiveDescriptor != "" {
+//            let desc = wallet.receiveDescriptor
+//            let arr = desc.split(separator: "]")
+//            let xpubWithPath = "\(arr[1])"
+//            let arr2 = xpubWithPath.split(separator: "/")
+//            return "\(arr2[0])"
+//        } else {
+//            return ""
+//        }
+//    }
     
     private func promptToDeleteWallet() {
         DispatchQueue.main.async { [weak self] in
@@ -458,7 +458,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             
             for w in wallets {
                 if w["id"] != nil {
-                    let str = Wallet(dictionary: w)
+                    let str = JMWallet(w)
                     if str.id == self.walletId {
                         self.wallet = str
                     }
@@ -580,16 +580,16 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         case .exportFile:
             exportJson()
             
-        case .receiveDesc:
-            exportItem(wallet.receiveDescriptor)
-            
-        case .changeDesc:
-            exportItem(wallet.changeDescriptor)
-            
-        case .watching:
-            guard let watching = wallet.watching else { return }
-            
-            exportItem(watching.description)
+//        case .receiveDesc:
+//            exportItem(wallet.receiveDescriptor)
+//            
+//        case .changeDesc:
+//            exportItem(wallet.changeDescriptor)
+//            
+//        case .watching:
+//            guard let watching = wallet.watching else { return }
+//            
+//            exportItem(watching.description)
             
         case .addressExplorer:
             exportItem(addresses)
@@ -647,7 +647,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         
         labelField = (cell.viewWithTag(1) as! UITextField)
         labelField.layer.borderColor = UIColor.clear.cgColor
-        labelField.text = wallet.label
+        labelField.text = wallet.name
         labelField.isUserInteractionEnabled = false
         labelField.returnKeyType = .done
         labelField.delegate = self
@@ -687,7 +687,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         configureCell(cell)
         
         let textView = cell.viewWithTag(1) as! UITextView
-        textView.text = wallet.receiveDescriptor
+        //textView.text = wallet.receiveDescriptor
         
         let exportButton = cell.viewWithTag(2) as! UIButton
         configureExportButton(exportButton, indexPath: indexPath)
@@ -700,7 +700,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         configureCell(cell)
         
         let textView = cell.viewWithTag(1) as! UITextView
-        textView.text = wallet.changeDescriptor
+        //textView.text = wallet.changeDescriptor
         
         let exportButton = cell.viewWithTag(2) as! UIButton
         configureExportButton(exportButton, indexPath: indexPath)
@@ -713,7 +713,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         configureCell(cell)
         
         let field = cell.viewWithTag(1) as! UITextField
-        field.text = "\(wallet.index)"
+        //field.text = "\(wallet.index)"
         field.layer.borderColor = UIColor.clear.cgColor
         
         return cell
@@ -724,7 +724,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         configureCell(cell)
         
         let field = cell.viewWithTag(1) as! UITextField
-        field.text = "\(wallet.maxIndex)"
+        //field.text = "\(wallet.maxIndex)"
         field.isUserInteractionEnabled = false
         field.layer.borderColor = UIColor.clear.cgColor
         
@@ -752,11 +752,11 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         let textView = cell.viewWithTag(1) as! UITextView
         var watching = ""
         
-        if wallet.watching != nil {
-            for watch in wallet.watching! {
-                watching += watch + "\n\n"
-            }
-        }
+//        if wallet.watching != nil {
+//            for watch in wallet.watching! {
+//                watching += watch + "\n\n"
+//            }
+//        }
         
         textView.text = watching
         
@@ -900,7 +900,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
             return UITableViewCell()
         }
         
-        originalLabel = wallet.label
+        originalLabel = wallet.name
         
         switch Section(rawValue: indexPath.section) {
         case .backupText:
@@ -1061,40 +1061,40 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
         
         if showReceive == 0 {
             spinner.addConnectingView(vc: self, description: "deriving receive addresses...")
-            deriveAddresses(wallet.receiveDescriptor)
+            //deriveAddresses(wallet.receiveDescriptor)
         } else {
             spinner.addConnectingView(vc: self, description: "deriving change addresses...")
-            deriveAddresses(wallet.changeDescriptor)
+            //deriveAddresses(wallet.changeDescriptor)
         }
     }
     
     @objc func increaseGapLimit() {
-        var max = Int(wallet.maxIndex) + 999
-        if max > 99999 {
-            max = 99999
-        }
-        
-        promptToUpdateMaxIndex(max: max)
+//        var max = Int(wallet.maxIndex) + 999
+//        if max > 99999 {
+//            max = 99999
+//        }
+//        
+//        promptToUpdateMaxIndex(max: max)
     }
     
     private func promptToUpdateMaxIndex(max: Int) {
-        if (max - (Int(self.wallet.maxIndex) + 1)) < 20001 {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                let alert = UIAlertController(title: "Increase the range limit to \(max)?", message: "Selecting yes will trigger a series of calls to your node to import \(max - (Int(self.wallet.maxIndex) + 1)) additional keys for each descriptor your wallet holds. This can take a bit of time so please be patient and wait for the spinner to dismiss.", preferredStyle: self.alertStyle)
-                
-                alert.addAction(UIAlertAction(title: "Yes", style: .default, handler: { action in
-                    self.importUpdatedIndex(maxRange: max)
-                }))
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
-            }
-        } else {
-            showAlert(vc: self, title: "Thats too many keys...", message: "Please only attempt to import less then 20,000 keys at a time otherwise things can get weird.")
-        }
+//        if (max - (Int(self.wallet.maxIndex) + 1)) < 20001 {
+//            DispatchQueue.main.async { [weak self] in
+//                guard let self = self else { return }
+//                
+//                let alert = UIAlertController(title: "Increase the range limit to \(max)?", message: "Selecting yes will trigger a series of calls to your node to import \(max - (Int(self.wallet.maxIndex) + 1)) additional keys for each descriptor your wallet holds. This can take a bit of time so please be patient and wait for the spinner to dismiss.", preferredStyle: self.alertStyle)
+//                
+//                alert.addAction(UIAlertAction(title: "Yes", style: .default, handler: { action in
+//                    self.importUpdatedIndex(maxRange: max)
+//                }))
+//                
+//                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+//                alert.popoverPresentationController?.sourceView = self.view
+//                self.present(alert, animated: true, completion: nil)
+//            }
+//        } else {
+//            showAlert(vc: self, title: "Thats too many keys...", message: "Please only attempt to import less then 20,000 keys at a time otherwise things can get weird.")
+//        }
     }
     
     private func updateSpinnerText(text: String) {
@@ -1104,21 +1104,21 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func importUpdatedIndex(maxRange: Int) {
-        spinner.addConnectingView(vc: self, description: "importing \(maxRange - Int(wallet.maxIndex) + 1) public keys...")
-        
-        var descriptorsToImport = [String]()
-        descriptorsToImport.append(wallet.receiveDescriptor)
-        descriptorsToImport.append(wallet.changeDescriptor)
-        
-        if wallet.watching != nil {
-            if wallet.watching!.count > 0 {
-                for watcher in wallet.watching! {
-                    descriptorsToImport.append(watcher)
-                }
-            }
-        }
-        
-        importDescriptors(index: 0, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
+//        spinner.addConnectingView(vc: self, description: "importing \(maxRange - Int(wallet.maxIndex) + 1) public keys...")
+//        
+//        var descriptorsToImport = [String]()
+//        descriptorsToImport.append(wallet.receiveDescriptor)
+//        descriptorsToImport.append(wallet.changeDescriptor)
+//        
+//        if wallet.watching != nil {
+//            if wallet.watching!.count > 0 {
+//                for watcher in wallet.watching! {
+//                    descriptorsToImport.append(watcher)
+//                }
+//            }
+//        }
+//        
+//        importDescriptors(index: 0, maxRange: maxRange, descriptorsToImport: descriptorsToImport)
     }
     
     private func importDescriptors(index: Int, maxRange: Int, descriptorsToImport: [String]) {

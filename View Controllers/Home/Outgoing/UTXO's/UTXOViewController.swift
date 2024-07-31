@@ -45,7 +45,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     private var inputArray:[[String:Any]] = []
     private var selectedUTXOs = [Utxo]()
     private var spinner = ConnectingView()
-    private var wallet:Wallet?
+    private var wallet: JMWallet?
     private var psbt:String?
     private var depositAddress:String?
     private var isJmarketWallet = false
@@ -107,12 +107,8 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     
     private func checkForJmWallet() {
         guard let wallet = self.wallet else { return }
-        if wallet.isJm {
-            self.isJmarketWallet = true
-            self.getStatus(wallet)
-        } else {
-            loadUnlockedUtxos()
-        }
+        self.isJmarketWallet = true
+        self.getStatus(wallet)
     }
     
     private func addSpinny(_ spinny: UIActivityIndicatorView) {
@@ -126,96 +122,95 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
-    private func getStatus(_ wallet: Wallet) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            let spinny = UIActivityIndicatorView()
-            self.addSpinny(spinny)
-            self.jmStatusLabelOutlet.text = "checking join market status..."
-            self.jmStatusLabelOutlet.alpha = 1
-            
-            JMUtils.session { [weak self] (response, message) in
-                guard let self = self else { return }
-                guard let status = response else {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        self.jmStatusLabelOutlet.text = "join market inactive"
-                        self.jmStatusImageOutlet.tintColor = .systemRed
-                        self.hideJmSpinner(spinny: spinny)
-                        self.loadUnlockedUtxos()
-                        showAlert(vc: self, title: "", message: "Join Market server doesn't seem to be responding, are you sure it is on?")
-                    }
-                    return
-                }
-                
-                self.jmActive = true
-                self.makerRunning = false
-                self.takerRunning = false
-                
-                if status.coinjoin_in_process {
-                    self.setTakerRunningUi()
-                } else if status.maker_running {
-                    self.setMakerRunningUi()
-                 } else if !status.maker_running {
-                    self.setMakerStoppedUi()
-                }
-                                
-                if !status.session {
-                    JMUtils.wallets { (wallets, message) in
-                        guard let wallets = wallets, wallets.count > 0 else {
-                            self.hideJmSpinner(spinny: spinny)
-                            self.addUtxoMixButton()
-                            return
-                        }
-                        
-                        var existsOnServer = false
-                        
-                        for (i, wallet) in wallets.enumerated() {
-                            if wallet == self.wallet!.jmWalletName {
-                                existsOnServer = true
-                            }
-                            
-                            if i + 1 == wallets.count {
-                                if existsOnServer {
-                                    JMUtils.unlockWallet(wallet: self.wallet!) { (unlockedWallet, message) in
-                                        guard let unlockedWallet = unlockedWallet else {
-                                            if let message = message, message.contains("Wallet cannot be created/opened, it is locked") {
-                                                self.hideJmSpinner(spinny: spinny)
-                                                showAlert(vc: self, title: "Unable to unlock JM wallet.", message: "Deleting .joinmarket/wallets/.\(self.wallet!.jmWalletName).lock file in  on your JM server will fix this.")
-                                            } else {
-                                                self.hideJmSpinner(spinny: spinny)
-                                                showAlert(vc: self, title: "Unable to unlock JM wallet...", message: message ?? "Unknown.")
-                                            }
-                                            
-                                            return
-                                        }
-                                        
-                                        guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                                            self.hideJmSpinner(spinny: spinny)
-                                            showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
-                                            return
-                                        }
-                                        
-                                        self.wallet!.token = encryptedToken
-                                        self.setMakerStoppedUi()
-                                        self.loadUnlockedUtxos()
-                                        self.hideJmSpinner(spinny: spinny)
-                                    }
-                                } else {
-                                    self.addUtxoMixButton()
-                                    self.hideJmSpinner(spinny: spinny)
-                                    self.loadUnlockedUtxos()
-                                    
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    self.hideJmSpinner(spinny: spinny)
-                    self.loadUnlockedUtxos()
-                }
-            }
-        }
+    private func getStatus(_ wallet: JMWallet) {
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            let spinny = UIActivityIndicatorView()
+//            self.addSpinny(spinny)
+//            self.jmStatusLabelOutlet.text = "checking join market status..."
+//            self.jmStatusLabelOutlet.alpha = 1
+//            
+//            JMUtils.session { [weak self] (response, message) in
+//                guard let self = self else { return }
+//                guard let status = response else {
+//                    DispatchQueue.main.async { [weak self] in
+//                        guard let self = self else { return }
+//                        self.jmStatusLabelOutlet.text = "join market inactive"
+//                        self.jmStatusImageOutlet.tintColor = .systemRed
+//                        self.hideJmSpinner(spinny: spinny)
+//                        self.loadUnlockedUtxos()
+//                        showAlert(vc: self, title: "", message: "Join Market server doesn't seem to be responding, are you sure it is on?")
+//                    }
+//                    return
+//                }
+//                
+//                self.jmActive = true
+//                self.makerRunning = false
+//                self.takerRunning = false
+//                
+//                if status.coinjoin_in_process {
+//                    self.setTakerRunningUi()
+//                } else if status.maker_running {
+//                    self.setMakerRunningUi()
+//                 } else if !status.maker_running {
+//                    self.setMakerStoppedUi()
+//                }
+//                                
+//                if !status.session {
+//                    JMUtils.wallets { (wallets, message) in
+//                        guard let wallets = wallets, wallets.count > 0 else {
+//                            self.hideJmSpinner(spinny: spinny)
+//                            self.addUtxoMixButton()
+//                            return
+//                        }
+//                        
+//                        
+//                        for (i, wallet) in wallets.enumerated() {
+//                            if wallet == self.wallet!.name {
+//                                existsOnServer = true
+//                            }
+//                            
+//                            if i + 1 == wallets.count {
+//                                if existsOnServer {
+//                                    JMUtils.unlockWallet(wallet: self.wallet!) { (unlockedWallet, message) in
+//                                        guard let unlockedWallet = unlockedWallet else {
+//                                            if let message = message, message.contains("Wallet cannot be created/opened, it is locked") {
+//                                                self.hideJmSpinner(spinny: spinny)
+//                                                showAlert(vc: self, title: "Unable to unlock JM wallet.", message: "Deleting .joinmarket/wallets/.\(self.wallet!.jmWalletName).lock file in  on your JM server will fix this.")
+//                                            } else {
+//                                                self.hideJmSpinner(spinny: spinny)
+//                                                showAlert(vc: self, title: "Unable to unlock JM wallet...", message: message ?? "Unknown.")
+//                                            }
+//                                            
+//                                            return
+//                                        }
+//                                        
+//                                        guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
+//                                            self.hideJmSpinner(spinny: spinny)
+//                                            showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
+//                                            return
+//                                        }
+//                                        
+//                                        self.wallet!.token = encryptedToken
+//                                        self.setMakerStoppedUi()
+//                                        self.loadUnlockedUtxos()
+//                                        self.hideJmSpinner(spinny: spinny)
+//                                    }
+//                                } else {
+//                                    self.addUtxoMixButton()
+//                                    self.hideJmSpinner(spinny: spinny)
+//                                    self.loadUnlockedUtxos()
+//                                    
+//                                }
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    self.hideJmSpinner(spinny: spinny)
+//                    self.loadUnlockedUtxos()
+//                }
+//            }
+//        }
     }
     
 //    private func openClnFromJm(_ utxo: Utxo, address: String) {
@@ -530,7 +525,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
-    private func showFidelityBondOptions(_ wallet: Wallet) {
+    private func showFidelityBondOptions(_ wallet: JMWallet) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
@@ -563,11 +558,11 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         }
     }
     
-    private func directSend(_ wallet: Wallet) {
+    private func directSend(_ wallet: JMWallet) {
         directSendNow()
     }
     
-    private func unfreezeFb(_ wallet: Wallet) {
+    private func unfreezeFb(_ wallet: JMWallet) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -661,7 +656,6 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         button.frame = CGRect(x: 0, y: pickerView.frame.maxY + 20, width: view.frame.width, height: 40)
         button.setTitle("Next", for: .normal)
         button.addTarget(self, action: #selector(closeDatePicker), for: .touchUpInside)
-        button.showsTouchWhenHighlighted = true
         button.setTitleColor(.systemTeal, for: .normal)
         blurView.contentView.addSubview(button)
         
@@ -669,7 +663,6 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
         cancel.frame = CGRect(x: 0, y: button.frame.maxY + 20, width: view.frame.width, height: 40)
         cancel.setTitle("Cancel", for: .normal)
         cancel.addTarget(self, action: #selector(cancelDatePicker), for: .touchUpInside)
-        cancel.showsTouchWhenHighlighted = true
         cancel.setTitleColor(.systemTeal, for: .normal)
         blurView.contentView.addSubview(cancel)
         
@@ -861,7 +854,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             return
         }
         
-        if let w = self.wallet, w.isJm {
+        if let w = self.wallet {
             self.isDirectSend = true
             if self.selectedUTXOs.count > 0 {
                 showAlert(vc: self, title: "", message: "Utxo selection is not supported by jm wallets. Deselect the utxos and tap the chain button again to create a direct send transaction with joinmarket. You will be prompted to choose which mixdepth to spend from.")
@@ -872,17 +865,6 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
                     self.updateInputs()
                     self.performSegue(withIdentifier: "segueToSendFromUtxos", sender: self)
                 }
-            }
-        } else {
-            if self.selectedUTXOs.count > 0 {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.updateInputs()
-                    self.performSegue(withIdentifier: "segueToSendFromUtxos", sender: self)
-                }
-            } else {
-                showAlert(vc: self, title: "Select a UTXO first", message: "Just tap a utxo(s) to select it. Then tap the 🔗 to create a transaction with those utxos.")
             }
         }
     }
@@ -957,31 +939,31 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             self.addSpinner()
         }
         
-        if let w = wallet, w.isJm, let jmwallet = self.wallet {
+        if let w = wallet {
             // use jm to fetch the utxos for the specific wallet
-            getUtxosFromJm(jmwallet: jmwallet)
-        } else {
-            getUtxosFromBtcRpc()
+            getUtxosFromJm(jmwallet: w)
         }
     }
     
-    private func getUtxosFromJm(jmwallet: Wallet) {
+    private func getUtxosFromJm(jmwallet: JMWallet) {
         JMRPC.sharedInstance.command(method: .listutxos(jmWallet: jmwallet), param: nil) { [weak self] (response, errorDesc) in
             guard let self = self else { return }
             if errorDesc == "Invalid credentials." {
-                JMUtils.unlockWallet(wallet: jmwallet) { (unlockedWallet, message) in
-                    guard let unlockedWallet = unlockedWallet else {
-                        showAlert(vc: self, title: "Join Market message", message: message ?? "unknown error unlocking your jm wallet.")
-                        return
-                    }
-                    
-                    guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                        showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
-                        return
-                    }
-                    self.wallet!.token = encryptedToken
-                    self.getUtxosFromJm(jmwallet: self.wallet!)
-                }
+                // Prompt to unlock
+                
+//                JMUtils.unlockWallet(password: <#String#>, wallet: jmwallet) { (unlockedWallet, message) in
+//                    guard let unlockedWallet = unlockedWallet else {
+//                        showAlert(vc: self, title: "Join Market message", message: message ?? "unknown error unlocking your jm wallet.")
+//                        return
+//                    }
+//                    
+//                    guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
+//                        showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
+//                        return
+//                    }
+//                    self.wallet!.token = encryptedToken
+//                    self.getUtxosFromJm(jmwallet: self.wallet!)
+//                }
             } else {
                 guard let response = response as? [String:Any], let utxos = response["utxos"] as? [[String:Any]] else {
                     self.finishedLoading()
@@ -1125,52 +1107,52 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
     }
     
     private func promptToLockWallets() {
-        CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
-            guard let wallets = wallets else { return }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                let tit = "You have an existing Join Market wallet which is unlocked, you need to lock it before we can create a new one."
-                
-                let mess = ""
-                
-                let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-                
-                JMUtils.wallets { (server_wallets, message) in
-                    guard let server_wallets = server_wallets else { return }
-                    for server_wallet in server_wallets {
-                        DispatchQueue.main.async {
-                            alert.addAction(UIAlertAction(title: server_wallet, style: .default, handler: { [weak self] action in
-                                guard let self = self else { return }
-                                
-                                self.spinner.addConnectingView(vc: self, description: "locking wallet...")
-                                
-                                for fnwallet in wallets {
-                                    if fnwallet["id"] != nil {
-                                        let str = Wallet(dictionary: fnwallet)
-                                        if str.jmWalletName == server_wallet {
-                                            JMUtils.lockWallet(wallet: str) { [weak self] (locked, message) in
-                                                guard let self = self else { return }
-                                                self.spinner.removeConnectingView()
-                                                if locked {
-                                                    showAlert(vc: self, title: "Wallet locked ✓", message: "Try joining the utxo again.")
-                                                } else {
-                                                    showAlert(vc: self, title: message ?? "Unknown issue locking that wallet...", message: "FN can only work with one JM wallet at a time, it looks like you need to restart your JM daemon in order to create a new wallet. Restart JM daemon and try again.")
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }))
-                        }
-                    }
-                }
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
-            }
-        }
+//        CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
+//            guard let wallets = wallets else { return }
+//            
+//            DispatchQueue.main.async { [weak self] in
+//                guard let self = self else { return }
+//                
+//                let tit = "You have an existing Join Market wallet which is unlocked, you need to lock it before we can create a new one."
+//                
+//                let mess = ""
+//                
+//                let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
+//                
+//                JMUtils.wallets { (server_wallets, message) in
+//                    guard let server_wallets = server_wallets else { return }
+//                    for server_wallet in server_wallets {
+//                        DispatchQueue.main.async {
+//                            alert.addAction(UIAlertAction(title: server_wallet, style: .default, handler: { [weak self] action in
+//                                guard let self = self else { return }
+//                                
+//                                self.spinner.addConnectingView(vc: self, description: "locking wallet...")
+//                                
+//                                for fnwallet in wallets {
+//                                    if fnwallet["id"] != nil {
+//                                        let str = JMWallet(fnwallet)
+//                                        if str.jmWalletName == server_wallet {
+//                                            JMUtils.lockWallet(wallet: str) { [weak self] (locked, message) in
+//                                                guard let self = self else { return }
+//                                                self.spinner.removeConnectingView()
+//                                                if locked {
+//                                                    showAlert(vc: self, title: "Wallet locked ✓", message: "Try joining the utxo again.")
+//                                                } else {
+//                                                    showAlert(vc: self, title: message ?? "Unknown issue locking that wallet...", message: "FN can only work with one JM wallet at a time, it looks like you need to restart your JM daemon in order to create a new wallet. Restart JM daemon and try again.")
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                            }))
+//                        }
+//                    }
+//                }
+//                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+//                alert.popoverPresentationController?.sourceView = self.view
+//                self.present(alert, animated: true, completion: nil)
+//            }
+//        }
     }
     
 //    private func promptToDepositToWallet(_ utxo: Utxo, _ serverWallets: [String]) {
@@ -1226,7 +1208,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
 //        //}
 //    }
     
-    private func getJmAddressNow(wallet: Wallet, utxo: Utxo) {
+    private func getJmAddressNow(wallet: JMWallet, utxo: Utxo) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -1311,7 +1293,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
 //        }
 //    }
     
-//    private func jmWalletCreated(_ utxo: Utxo, _ wallet: Wallet) {
+//    private func jmWalletCreated(_ utxo: Utxo, _ wallet: JMWallet) {
 //        DispatchQueue.main.async { [weak self] in
 //            guard let self = self else { return }
 //
@@ -1334,7 +1316,7 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
 //        }
 //    }
     
-    private func promptToDeposit(_ utxo: Utxo, _ wallet: Wallet) {
+    private func promptToDeposit(_ utxo: Utxo, _ wallet: JMWallet) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             

@@ -47,7 +47,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
     var id: UUID!
     var hasSigned = false
     var isSigning = false
-    var wallet:Wallet?
+    var wallet: JMWallet?
     var bitcoinCoreWallets = [String()]
     var walletIndex = 0
     var qrCodeStringToExport = ""
@@ -1767,7 +1767,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 backgroundView1.backgroundColor = .systemGreen
                 inputIsOursImage.image = UIImage(systemName: "checkmark.circle.fill")
                 
-                if let walletLabel = wallet?.label {
+                if let walletLabel = wallet?.name {
                     inputIsOursLabel.text = "Owned by \(walletLabel)"
                 } else {
                     inputIsOursLabel.text = "Owned by the Active Wallet"
@@ -1780,7 +1780,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 inputIsOursImage.image = UIImage(systemName: "questionmark.diamond.fill")
                 isChangeImageView.image = UIImage(systemName: "questionmark.diamond.fill")
                 
-                if let walletLabel = wallet?.label {
+                if let walletLabel = wallet?.name {
                     inputIsOursLabel.text = "Not owned by \(walletLabel)"
                 } else {
                     inputIsOursLabel.text = "Not owned by the Active Wallet"
@@ -1912,7 +1912,7 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
             var activeWalletLabel = "Bitcoin Core"
             
             if self.wallet != nil {
-                activeWalletLabel = self.wallet!.label
+                activeWalletLabel = self.wallet!.name
             }
             
             if isOursBitcoind {
@@ -1922,12 +1922,12 @@ class VerifyTransactionViewController: UIViewController, UINavigationControllerD
                 outputIsOursImage.image = UIImage(systemName: "checkmark.circle.fill")
                 
                 if self.wallet != nil {
-                    let ds = Descriptor(self.wallet!.receiveDescriptor)
-                    if ds.isHot {
-                        signableImageView.image = UIImage(systemName: "checkmark.square.fill")
-                        signableBackgroundView.backgroundColor = .systemGreen
-                        signerLabel.text = "Bitcoin Core hot wallet"
-                    }
+//                    let ds = Descriptor(self.wallet!.receiveDescriptor)
+//                    if ds.isHot {
+//                        signableImageView.image = UIImage(systemName: "checkmark.square.fill")
+//                        signableBackgroundView.backgroundColor = .systemGreen
+//                        signerLabel.text = "Bitcoin Core hot wallet"
+//                    }
                 }
                 
             } else {

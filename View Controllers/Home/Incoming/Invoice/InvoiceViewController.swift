@@ -156,7 +156,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         print("generate address")
     }
     
-    private func getReceiveAddressJm(wallet: Wallet) {
+    private func getReceiveAddressJm(wallet: JMWallet) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -202,51 +202,37 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         }
     }
     
-    private func getJmAddressFromMixDepth(mixDepth: Int, wallet: Wallet) {
+    private func getJmAddressFromMixDepth(mixDepth: Int, wallet: JMWallet) {
         spinner.addConnectingView(vc: self, description: "getting address from jm...")
         var w = wallet
-        if w.token != nil {
-            JMRPC.sharedInstance.command(method: .getaddress(jmWallet: w, mixdepth: mixDepth), param: nil) { [weak self] (response, errorDesc) in
-                guard let self = self else { return }
+        JMRPC.sharedInstance.command(method: .getaddress(jmWallet: w, mixdepth: mixDepth), param: nil) { [weak self] (response, errorDesc) in
+            guard let self = self else { return }
+            
+            if errorDesc == "Invalid credentials." {
+                // Prompt to unlock
                 
-                if errorDesc == "Invalid credentials." {
-                    JMUtils.unlockWallet(wallet: w) { [weak self] (unlockedWallet, message) in
-                        guard let self = self else { return }
-                        guard let unlockedWallet = unlockedWallet else { return }
-                        
-                        guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                            self.spinner.removeConnectingView()
-                            showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
-                            return
-                        }
-                        
-                        w.token = encryptedToken
-                        self.getJmAddressFromMixDepth(mixDepth: mixDepth, wallet: w)
-                    }
-                    
-                } else {
-                    guard let response = response as? [String:Any],
-                    let address = response["address"] as? String else {
-                        showAlert(vc: self, title: "", message: errorDesc ?? "unknown error getting jm address.")
-                        return
-                    }
-                    self.spinner.removeConnectingView()
-                    self.showAddress(address: address)
-                }
-            }
-        } else {
-            JMUtils.unlockWallet(wallet: w) { [weak self] (unlockedWallet, message) in
-                guard let self = self else { return }
-                guard let unlockedWallet = unlockedWallet else { return }
+//                JMUtils.unlockWallet(wallet: w) { [weak self] (unlockedWallet, message) in
+//                    guard let self = self else { return }
+//                    guard let unlockedWallet = unlockedWallet else { return }
+//
+//                    guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
+//                        self.spinner.removeConnectingView()
+//                        showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
+//                        return
+//                    }
+//
+//                    w.token = encryptedToken
+//                    self.getJmAddressFromMixDepth(mixDepth: mixDepth, wallet: w)
+//                }
                 
-                guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                    self.spinner.removeConnectingView()
-                    showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
+            } else {
+                guard let response = response as? [String:Any],
+                      let address = response["address"] as? String else {
+                    showAlert(vc: self, title: "", message: errorDesc ?? "unknown error getting jm address.")
                     return
                 }
-                
-                w.token = encryptedToken
-                self.getJmAddressFromMixDepth(mixDepth: mixDepth, wallet: w)
+                self.spinner.removeConnectingView()
+                self.showAddress(address: address)
             }
         }
     }

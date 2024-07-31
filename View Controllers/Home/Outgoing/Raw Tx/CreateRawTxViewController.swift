@@ -12,7 +12,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     var isJmarket = false
     var isDirectSend = false
     var mixdepthToSpendFrom = 0
-    var jmWallet:Wallet?
+    var jmWallet:JMWallet?
     var isFiat = false
     var isBtc = true
     var isSats = false
@@ -163,65 +163,9 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    @IBAction func sendToWalletAction(_ sender: Any) {
-        CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
-            guard let self = self else { return }
-            
-            guard let wallets = wallets, !wallets.isEmpty else {
-                showAlert(vc: self, title: "No wallets...", message: "")
-                return
-            }
-            
-            var walletsToSendTo:[Wallet] = []
-            
-            let chain = UserDefaults.standard.object(forKey: "chain") as? String ?? "main"
-            
-            for (i, wallet) in wallets.enumerated() {
-                if wallet["id"] != nil {
-                    let walletStruct = Wallet(dictionary: wallet)
-                    let desc = Descriptor(walletStruct.receiveDescriptor)
-                    
-                    if chain == "main" && desc.chain == "Mainnet" {
-                        walletsToSendTo.append(walletStruct)
-                    } else if chain != "main" && desc.chain != "Mainnet" {
-                        walletsToSendTo.append(walletStruct)
-                    }
-                                        
-                    if i + 1 == wallets.count {
-                        self.selectWalletRecipient(walletsToSendTo)
-                    }
-                }
-            }
-        }
-    }
     
     
-    private func selectWalletRecipient(_ wallets: [Wallet]) {
-        guard !wallets.isEmpty else {
-            showAlert(vc: self, title: "No wallets...", message: "None of the wallets you have saved are on the same network as your active node.")
-            return
-        }
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let title = "Select a wallet to send to."
-            
-            let alert = UIAlertController(title: title, message: "", preferredStyle: .alert)
-            
-            for wallet in wallets {
-                alert.addAction(UIAlertAction(title: wallet.label, style: .default, handler: { action in
-                    self.getAddressFromWallet(wallet)
-                }))
-            }
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func getAddressFromJm(wallet: Wallet) {
+    private func getAddressFromJm(wallet: JMWallet) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -267,7 +211,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func getJmAddressFromMixDepth(mixDepth: Int, wallet: Wallet) {
+    private func getJmAddressFromMixDepth(mixDepth: Int, wallet: JMWallet) {
         spinner.addConnectingView(vc: self, description: "getting address from jm...")
         
         JMRPC.sharedInstance.command(method: .getaddress(jmWallet: wallet, mixdepth: mixDepth), param: nil) { [weak self] (response, errorDesc) in
@@ -283,12 +227,12 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func getAddressFromWallet(_ wallet: Wallet) {
+    private func getAddressFromWallet(_ wallet: JMWallet) {
         spinner.addConnectingView(vc: self, description: "getting address...")
         getAddressFromJm(wallet: wallet)
     }
     
-    private func addAdressNow(address: String, wallet: Wallet) {
+    private func addAdressNow(address: String, wallet: JMWallet) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
@@ -433,7 +377,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 
             } else if isJmarket {
                 guard let jmWallet = jmWallet else { return }
-                promptToCoinjoinWithJM(jmWallet: jmWallet, recipient: addressInput, amount: amount)
+                promptToCoinjoinWithJM(wallet: jmWallet, recipient: addressInput, amount: amount)
             } else {
                 tryRaw()
             }
@@ -449,14 +393,14 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func promptToCoinjoinWithJM(jmWallet: Wallet, recipient: String, amount: String) {
+    private func promptToCoinjoinWithJM(wallet: JMWallet, recipient: String, amount: String) {
         let counter = Int.random(in: 5...15)
         let sats = Int(Double(amount)! * 100000000.0)
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let alert = UIAlertController(title: "Start coinjoin?", message: "You will *not* be prompted with the transaction verifier when using Join Market to create coinjoins!\n\nMake sure you are happy with the following as there is no going back:\n\nsats: \(sats)\naddress: \(recipient)\nfrom mixdepth: \(self.mixdepthToSpendFrom)\ncounterparties: \(counter)", preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "Start Coinjoin", style: .default, handler: { action in
-                JMUtils.coinjoin(wallet: jmWallet,
+                JMUtils.coinjoin(wallet: wallet,
                                  amount_sats: sats,
                                  mixdepth: self.mixdepthToSpendFrom,
                                  counterparties: counter,
@@ -472,14 +416,14 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func promptToDirectSendWithJM(jmWallet: Wallet, recipient: String, amount: Int, mixdepth: Int) {
+    private func promptToDirectSendWithJM(wallet: JMWallet, recipient: String, amount: Int, mixdepth: Int) {
         //let counter = Int.random(in: 5...15)
         //let sats = Int(Double(amount)! * 100000000.0)
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let alert = UIAlertController(title: "Direct send with Join Market?", message: "You will *not* be prompted with the transaction verifier when using Join Market to direct send!\n\nMake sure you are happy with the following as there is no going back:\n\nsats: \(amount)\naddress: \(recipient)\nfrom mixdepth: \(mixdepth)", preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "Direct send", style: .default, handler: { action in
-                JMUtils.directSend(wallet: jmWallet, address: recipient, amount: amount, mixdepth: mixdepth) { [weak self] (jmTx, message) in
+                JMUtils.directSend(wallet: wallet, address: recipient, amount: amount, mixdepth: mixdepth) { [weak self] (jmTx, message) in
                     guard let self = self else { return }
                     
                     self.spinner.removeConnectingView()
@@ -556,7 +500,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             sats = Int(dblAmount * 100000000.0)
         }
         
-        promptToDirectSendWithJM(jmWallet: jmWallet, recipient: self.addressInput.text!, amount: sats, mixdepth: mixdepth)
+        promptToDirectSendWithJM(wallet: jmWallet, recipient: self.addressInput.text!, amount: sats, mixdepth: mixdepth)
     }
     
 //    private func createBlindNow(amount: Double, recipient: String, strict: Bool) {

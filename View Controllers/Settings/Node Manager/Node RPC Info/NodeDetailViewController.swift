@@ -19,6 +19,9 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     var isInitialLoad = Bool()
     let imagePicker = UIImagePickerController()
     var scanNow = false
+    var jmWallet: JMWallet?
+    var words: String?
+    var password: String?
     
     
     @IBOutlet weak var masterStackView: UIStackView!
@@ -46,7 +49,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         saveButton.layer.cornerRadius = 8
         header.text = "Node Credentials"
         navigationController?.delegate = self
-        onionAddressField.placeholder = "localhost:28183"
+        onionAddressField.text = "localhost:28183"
         nodeLabel.text = "Join Market"
     }
     
@@ -94,33 +97,77 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         if createNew || selectedNode == nil {
             newNode["id"] = UUID()
             
-            if onionAddressField != nil,
-                let onionAddressText = onionAddressField.text {
-               guard let encryptedOnionAddress = encryptedValue(onionAddressText.utf8)  else {
-                    showAlert(vc: self, title: "", message: "Error encrypting the address.")
-                    return }
-                newNode["onionAddress"] = encryptedOnionAddress
+            guard let onionAddressText = onionAddressField.text else {
+                showAlert(vc: self, title: "", message: "Add a node address first. If JM is running locally use localhost:28183.")
+                return
             }
-                    
-            if nodeLabel.text != "" {
-                newNode["label"] = nodeLabel.text!
-            }
-
             
-            guard let encryptedCert = encryptCert(certField.text!) else {
+            guard let encryptedOnionAddress = encryptedValue(onionAddressText.utf8)  else {
+                showAlert(vc: self, title: "", message: "Error encrypting the address.")
+                return
+            }
+            
+            newNode["onionAddress"] = encryptedOnionAddress
+            newNode["label"] = nodeLabel.text ?? "Join Market"
+            
+            guard let certText = certField.text?.condenseWhitespace(), certText != "" else {
+                showAlert(vc: self, title: "", message: "Paste in the SSL cert text first.")
+                return
+            }
+            
+            guard let encryptedCert = encryptCert(certText) else {
+                showAlert(vc: self, title: "", message: "Unable to encrypt your cert.")
                 return
             }
             
             newNode["cert"] = encryptedCert
+            newNode["isActive"] = true
             
             func save() {
-                CoreDataService.saveEntity(dict: self.newNode, entityName: .newNodes) { [unowned vc = self] success in
-                     if success {
-                         vc.nodeAddedSuccess()
-                     } else {
-                         displayAlert(viewController: vc, isError: true, message: "Error saving tor node")
+                print("save")
+                
+                func saveNow() {
+                    print("saveNow")
+                    CoreDataService.saveEntity(dict: self.newNode, entityName: .newNodes) { [weak self] success in
+                        guard let self = self else { return }
+                        
+                         if success {
+                             JMUtils.wallets { [weak self] (response, message) in
+                                 guard let self = self else { return }
+                                 
+                                 guard let response = response else {
+                                     showAlert(vc: self, title: "There was an issue testing your connection..", message: message ?? "Unknown issue.")
+                                     
+                                     return
+                                 }
+                                 
+                                 if response.count == 0 {
+                                     promptToCreateWallet()
+                                 } else {
+                                     showAlert(vc: self, title: "Connected to Join Market ✓", message: "You have exisiting wallets, would you like to connect to one?")
+                                 }
+                             }
+                         } else {
+                             showAlert(vc: self, title: "Node not added...", message: "There was an issue adding your node, please let us know about it.")
+                         }
                      }
-                 }
+                }
+                
+                CoreDataService.retrieveEntity(entityName: .newNodes) { nodes in
+                    guard let nodes = nodes, nodes.count > 0 else {
+                        saveNow()
+                        return
+                    }
+                    
+                    for (i, node) in nodes.enumerated() {
+                        let node = NodeStruct(dictionary: node)
+                        CoreDataService.update(id: node.id!, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { updated in
+                            if updated, i + 1 == nodes.count {
+                                saveNow()
+                            }
+                        }
+                    }
+                }
             }
             
             guard certField.text != "" || onionAddressField.text != "" else {
@@ -171,6 +218,119 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         }
     }
     
+    private func promptToCreateWallet() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let tit = "Join Market connected ✓"
+            
+            let mess = "In order to use the app you need to create a Join Market wallet."
+            
+            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
+            alert.addAction(UIAlertAction(title: "Create a wallet", style: .default, handler: { [weak self] action in
+                guard let self = self else { return }
+                
+                getLabelAndPasswordForWallet()
+            }))
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+            alert.popoverPresentationController?.sourceView = self.view
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+    
+    private func getLabelAndPasswordForWallet() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let alert = UIAlertController(title: "To create a wallet provide a label and a password.", message: "The label will be used as a filename for the wallet.\n\nThe password will be used to encrypt and decrypt the wallet.\n\nYou MUST remember the password to use the wallet! Fully Noded does not save it!", preferredStyle: .alert)
+
+            alert.addTextField { textFieldLabel in
+                textFieldLabel.placeholder = "Label / filename."
+            }
+            
+            alert.addTextField { passwordField1 in
+                passwordField1.placeholder = "A password you won't forget."
+                passwordField1.isSecureTextEntry = true
+            }
+            
+            alert.addTextField { passwordField2 in
+                passwordField2.placeholder = "Confirm password."
+                passwordField2.isSecureTextEntry = true
+            }
+
+            alert.addAction(UIAlertAction(title: "Create Wallet", style: .default, handler: { [weak self] _ in
+                guard let self = self else { return }
+                
+                let fileName = alert.textFields![0].text // Force unwrapping because we know it exists.
+                let password1 = alert.textFields![1].text
+                let password2 = alert.textFields![2].text
+                
+                if let fileName = fileName, 
+                    fileName != "" {
+                    if let password1 = password1,
+                        let password2 = password2,
+                        password1 == password2 {
+                        self.createWallet(label: fileName, password: password1)
+                    } else {
+                        showAlert(vc: self, title: "Passwords don't match...", message: "Navigate to the Active Wallet view to try again.")
+                    }
+                } else {
+                    showAlert(vc: self, title: "Empty label", message: "Please add a label / filename in order to create a wallet. Navigate to the Active Wallet view to try again.")
+                }
+            }))
+
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+    
+    private func createWallet(label: String, password: String) {
+        spinner.addConnectingView(vc: self, description: "Creating your wallet...")
+        JMUtils.createWallet(label: label, password: password) { [weak self] (response, words, message) in
+            guard let self = self else { return }
+            
+            self.spinner.removeConnectingView()
+            
+            guard let jmWallet = response, let words = words else {
+                showAlert(vc: self, title: "There was an issue creating your JM wallet.", message: message ?? "Unknown.")
+                
+                return
+            }
+            
+            self.password = password
+            self.words = words
+            self.jmWallet = jmWallet
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                
+                self.performSegue(withIdentifier: "segueToBackUpInfo", sender: self)
+            }
+        }
+    }
+    
+    private func promptToImportWallet() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let tit = "Join Market connected ✓"
+            
+            let mess = "You have existing Join Market wallets, connect to one?"
+            
+            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
+            alert.addAction(UIAlertAction(title: "Connect a wallet", style: .default, handler: { [weak self] action in
+                guard let self = self else { return }
+                
+                
+                
+            }))
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+            alert.popoverPresentationController?.sourceView = self.view
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+    
     func configureTapGesture() {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard(_:)))
         tapGesture.numberOfTapsRequired = 1
@@ -182,12 +342,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             guard let decrypted = Crypto.decrypt(encryptedValue) else { return "" }
             
             return decrypted.utf8String ?? ""
-        }
-        
-        func decryptedNostr(_ encryptedValue: Data) -> String {
-            guard let decrypted = Crypto.decrypt(encryptedValue) else { return "" }
-            
-            return decrypted.hexString
         }
         
         if selectedNode != nil {
@@ -265,20 +419,28 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "segueToScanNodeCreds" {
-            if #available(macCatalyst 14.0, *) {
-                if let vc = segue.destination as? QRScannerViewController {
-                    vc.isQuickConnect = true
-                    vc.onDoneBlock = { [unowned thisVc = self] url in
-                        if url != nil {
-                            thisVc.addBtcRpcQr(url: url!)
-                        }
-                    }
+        switch segue.identifier {
+        case "segueToBackUpInfo":
+            guard let vc = segue.destination as? SeedDisplayerViewController else { fallthrough }
+            
+            vc.jmWallet = self.jmWallet
+            vc.password = self.password
+            vc.words = self.words
+            
+        case "segueToScanNodeCreds":
+            guard let vc = segue.destination as? QRScannerViewController  else { fallthrough }
+            
+            vc.isQuickConnect = true
+            vc.onDoneBlock = { [unowned thisVc = self] url in
+                if url != nil {
+                    thisVc.addBtcRpcQr(url: url!)
                 }
-            } else {
-                // Fallback on earlier versions
             }
+            
+        default:
+            break
         }
+        
     }
     
 }

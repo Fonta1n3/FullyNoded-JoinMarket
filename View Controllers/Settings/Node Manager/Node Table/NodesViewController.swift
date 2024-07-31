@@ -332,73 +332,14 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     private func addNodePrompt() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let alertStyle = UIAlertController.Style.alert
-            
-            let alert = UIAlertController(title: "Scan QR or add manually?", message: "You can add the node credentials manually or scan a QR code.", preferredStyle: alertStyle)
-            
-            alert.addAction(UIAlertAction(title: "Nostrnode", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                self.isNostr = true
-                self.isLightning = false
-                self.isJoinMarket = false
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Bitcoin Core", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isLightning = false
-                self.isJoinMarket = false
-                self.isBitcoinCore = true
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Join Market", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isLightning = false
-                self.isJoinMarket = true
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Core Lightning", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isCLN = true
-                self.isLND = false
-                self.isLightning = true
-                self.isJoinMarket = false
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "LND", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.isLND = true
-                self.isCLN = false
-                self.isLightning = true
-                self.isJoinMarket = false
-                self.isBitcoinCore = false
-                self.segueToAddNodeManually()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Scan QR", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.segueToScanNode()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            
-            self.present(alert, animated: true, completion: nil)
-        }
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            
+//            self.isLightning = false
+//            self.isJoinMarket = true
+//            self.isBitcoinCore = false
+//            self.segueToAddNodeManually()
+//        }
     }
     
     @IBAction func addNode(_ sender: Any) {

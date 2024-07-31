@@ -9,7 +9,7 @@
 import Foundation
 
 class JMUtils {
-    static func getDescriptors(wallet: Wallet, completion: @escaping ((descriptors: [String]?,  message: String?)) -> Void) {
+    static func getDescriptors(wallet: JMWallet, completion: @escaping ((descriptors: [String]?,  message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .getSeed(jmWallet: wallet), param: nil) { (response, errorDesc) in
             guard let dict = response as? [String:Any],
                   let words = dict["seedphrase"] as? String else {
@@ -37,32 +37,20 @@ class JMUtils {
         }
     }
     
-    static func createWallet(completion: @escaping ((response: Wallet?,
-                                                     words: String?,
-                                                     passphrase: String?,
-                                                     message: String?)) -> Void) {
-        
-        guard let passwordWords = Keys.seed() else { return }
-        let arr = passwordWords.split(separator: " ")
-        var password = ""
-        
-        for (i, word) in arr.enumerated() {
-            if i <= 6 {
-                password += word + " "
-            }
-        }
-        
-        let jmWalletName = "FullyNoded-\(randomString(length: 6).uppercased()).jmdat"
+    // Get user to provide encryption password.
+    static func createWallet(label: String,
+                             password: String,
+                             completion: @escaping ((response: JMWallet?, words: String?, message: String?)) -> Void) {
         
         let param:[String:Any] = [
-            "walletname": jmWalletName,
+            "walletname": label + ".jmdat",
             "password": password,
             "wallettype":"sw-fb"
         ]
         
         JMRPC.sharedInstance.command(method: .walletcreate, param: param) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
-                completion((nil, nil, nil, errorDesc ?? "Unknown."))
+                completion((nil, nil, errorDesc ?? "Unknown."))
                 return
             }
             
@@ -70,72 +58,26 @@ class JMUtils {
             let signer = jmWalletCreated.seedphrase
             
             guard let encryptedToken = Crypto.encrypt(jmWalletCreated.token.utf8),
-                  let encryptedWords = Crypto.encrypt(signer.utf8),
-                  let encryptedPass = Crypto.encrypt(password.utf8) else {
-                completion((nil, nil, nil, "Error encrypting jm wallet credentials."))
+                  let encryptedWords = Crypto.encrypt(signer.utf8) else {
+                completion((nil, nil, "Error encrypting jm wallet credentials."))
                 return
             }
             
-            let dict:[String:Any] = [
+            let jmWallet: [String:Any] = [
                 "id": UUID(),
-                "words": encryptedWords,
-                "added": Date(),
-                "label": "Join Market"
+                "token":encryptedToken,
+                "name": label,
+                "active": true
             ]
             
-//            CoreDataService.saveEntity(dict: dict, entityName: .signers) { success in
-//                guard success else {
-//                    completion((nil, nil, nil, "Unable to save the signer."))
-//                    return
-//                }
-//                
-//                let (mk, xfp, block) = getMkXfpBlock(signer: signer)
-//                guard let mk = mk, let xfp = xfp, let block = block else { return }
-//                
-//                let fnWalletId = UUID()
-//                
-//                JoinMarket.descriptors(mk, xfp) { descriptors in
-//                    guard let descriptors = descriptors else {
-//                        completion((nil, nil, nil, "Error creating your jm descriptors."))
-//                        return
-//                    }
-//                    
-//                    var fnWallet:[String:Any] = [
-//                        "receiveDescriptor":descriptors[0],
-//                        "changeDescriptor":descriptors[1],
-//                        "blockheight": block,
-//                        "watching":Array(descriptors[2...descriptors.count - 1]),
-//                        "label":"Join Market",
-//                        "index": Int64(0),
-//                        "maxIndex": 100,
-//                        "type": "Single-Sig",
-//                        "isJm": true,
-//                        "id": fnWalletId,
-//                        "token":encryptedToken,
-//                        "password": encryptedPass,
-//                        "jmWalletName": jmWalletName,
-//                        "name": ""
-//                    ]
-//                    
-//                    JMUtils.configGet(wallet: Wallet(dictionary: fnWallet), section: "BLOCKCHAIN", field: "rpc_wallet_file") { (jm_rpc_wallet, message) in
-//                        guard let jm_rpc_wallet = jm_rpc_wallet else {
-//                            completion((nil, nil, nil, message ?? "error fetching Bitcoin Core rpc wallet name in jm config."))
-//                            return
-//                        }
-//                        
-//                        fnWallet["name"] = jm_rpc_wallet
-//                        
-//                        CoreDataService.saveEntity(dict: fnWallet, entityName: .wallets) { fnWalletSaved in
-//                            guard fnWalletSaved else {
-//                                completion((nil, nil, nil, "Error saving fn wallet."))
-//                                return
-//                            }
-//                            
-//                            completion((Wallet(dictionary: fnWallet), signer, password, nil))
-//                        }
-//                    }
-//                }
-//            }
+            CoreDataService.saveEntity(dict: jmWallet, entityName: .jmWallets) { walletSaved in
+                guard walletSaved else {
+                    completion((nil, nil, "Error saving wallet."))
+                    return
+                }
+                
+                completion((JMWallet(jmWallet), signer, nil))
+            }
         }
     }
     
@@ -155,7 +97,7 @@ class JMUtils {
         return (mk, xfp, blockheight)
     }
     
-    static func lockWallet(wallet: Wallet, completion: @escaping ((locked: Bool, message: String?)) -> Void) {
+    static func lockWallet(wallet: JMWallet, completion: @escaping ((locked: Bool, message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .lockwallet(jmWallet: wallet), param: nil) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
                 completion((false, errorDesc ?? "Unknown."))
@@ -167,8 +109,8 @@ class JMUtils {
         }
     }
     
-    static func unlockWallet(wallet: Wallet, completion: @escaping ((unlockedWallet: WalletUnlock?, message: String?)) -> Void) {
-        JMRPC.sharedInstance.command(method: .unlockwallet(jmWallet: wallet), param: nil) { (response, errorDesc) in
+    static func unlockWallet(password: String, wallet: JMWallet, completion: @escaping ((unlockedWallet: WalletUnlock?, message: String?)) -> Void) {
+        JMRPC.sharedInstance.command(method: .unlockwallet(jmWallet: wallet, password: password), param: nil) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
                 completion((nil, errorDesc ?? "Unknown."))
                 return
@@ -187,7 +129,7 @@ class JMUtils {
     }
 
     
-    static func display(wallet: Wallet, completion: @escaping ((detail: WalletDetail?, message: String?)) -> Void) {
+    static func display(wallet: JMWallet, completion: @escaping ((detail: WalletDetail?, message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .walletdisplay(jmWallet: wallet), param: nil) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
                 completion((nil, errorDesc ?? "Unknown."))
@@ -198,44 +140,19 @@ class JMUtils {
         }
     }
     
-    static func getAddress(wallet: Wallet, mixdepth: Int, completion: @escaping ((address: String?, message: String?)) -> Void) {
-        JMUtils.unlockWallet(wallet: wallet) { (unlockedWallet, message) in
-            var updatedWallet = wallet
-            
-            guard let unlockedWallet = unlockedWallet else {
-                
-                if let message = message {
-                    if message.contains("Wallet cannot be created/opened, it is locked.") {
-                        completion((nil, "Delete the hidden .lock file on your JM wallet located at /.joinmarket/wallets/.\(wallet.name).lock and try again.\n\nDO NOT DELETE THE ACTUAL WALLET FILE!"))
-                    } else {
-                        completion((nil, message))
-                    }
-                } else {
-                    completion((nil, message ?? "unknow error."))
-                }
-                
+    static func getAddress(wallet: JMWallet, mixdepth: Int, completion: @escaping ((address: String?, message: String?)) -> Void) {
+        JMRPC.sharedInstance.command(method: .getaddress(jmWallet: wallet, mixdepth: mixdepth), param: nil) { (response, errorDesc) in
+            guard let response = response as? [String:Any],
+                  let address = response["address"] as? String else {
+                completion((nil, errorDesc ?? "unknown"))
                 return
             }
             
-            guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-                completion((nil, "Unable to decrypt your auth token."))
-                return
-            }
-            
-            updatedWallet.token = encryptedToken
-            JMRPC.sharedInstance.command(method: .getaddress(jmWallet: updatedWallet, mixdepth: mixdepth), param: nil) { (response, errorDesc) in
-                guard let response = response as? [String:Any],
-                let address = response["address"] as? String else {
-                    completion((nil, errorDesc ?? "unknown"))
-                    return
-                }
-
-                completion((address, "message"))
-            }
+            completion((address, "message"))
         }
     }
     
-    static func coinjoin(wallet: Wallet,
+    static func coinjoin(wallet: JMWallet,
                          amount_sats: Int,
                          mixdepth: Int,
                          counterparties: Int,
@@ -249,46 +166,6 @@ class JMUtils {
             "destination": address
         ]
         
-//        var streamTask: URLSessionStreamTask!
-//        let host = "xxx.onion"
-//        let port = 28283
-        
-//        guard let decryptedToken = Crypto.decrypt(wallet.token),
-//              let token = decryptedToken.utf8String else {
-//                  completion((nil, "Unable to decrypt token."))
-//                  return
-//              }
-        
-//        let sesh = TorClient.sharedInstance.session
-//        streamTask = sesh.streamTask(withHostName: host, port: port)
-//        streamTask.resume()
-//
-//        func read() {
-//            streamTask.readData(ofMinLength: 0, maxLength: 9999, timeout: 60) { (data, atEOF, error) in
-//                guard let data = data,
-//                let json = try? JSONSerialization.jsonObject(with: data, options: .mutableLeaves) as? [String:Any] else {
-//                    print("streamTask data: \(data?.utf8String)")
-//                    if let error = error {
-//                        print("streamTask error: \(error.localizedDescription)")
-//                    }
-//                    read()
-//
-//                    return
-//                }
-//                print("streamTask json: \(json)")
-//                read()
-//            }
-//        }
-//
-//        streamTask.write((token + "\r\n").data(using: .utf8)!, timeout: 20) { error in
-//            if let error = error {
-//                print("Failed to send: \(token)\n\(String(describing: error.localizedDescription))")
-//            } else {
-//                print("sent message: \(token)")
-//                read()
-//            }
-//        }
-        
         JMRPC.sharedInstance.command(method: .coinjoin(jmWallet: wallet), param: param) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
                 completion((nil, errorDesc ?? "unknown"))
@@ -299,7 +176,7 @@ class JMUtils {
         }
     }
     
-    static func stopTaker(wallet: Wallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
+    static func stopTaker(wallet: JMWallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .takerStop(jmWallet: wallet), param: nil) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
                 completion((nil, errorDesc ?? "unknown"))
@@ -310,7 +187,7 @@ class JMUtils {
         }
     }
     
-    static func configGet(wallet: Wallet,
+    static func configGet(wallet: JMWallet,
                           section: String,
                           field: String,
                           completion: @escaping ((response: String?, message: String?)) -> Void) {
@@ -331,7 +208,7 @@ class JMUtils {
         }
     }
     
-    static func configSet(wallet: Wallet,
+    static func configSet(wallet: JMWallet,
                           section: String,
                           field: String,
                           value: String,
@@ -363,7 +240,7 @@ class JMUtils {
         }
     }
     
-    static func startMaker(wallet: Wallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
+    static func startMaker(wallet: JMWallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
         let txfee = 0
         let cjfee_a = Int.random(in: 5000...10000)
         let cjfee_r = Double.random(in: 0.00002...0.000025)
@@ -388,7 +265,7 @@ class JMUtils {
         }
     }
     
-    static func stopMaker(wallet: Wallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
+    static func stopMaker(wallet: JMWallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .makerStop(jmWallet: wallet), param: nil) { (response, errorDesc) in
             guard let response = response as? [String:Any] else {
                 completion((nil, errorDesc))
@@ -399,7 +276,7 @@ class JMUtils {
         }
     }
     
-    static func fidelityStatus(wallet: Wallet, completion: @escaping ((exists: Bool?, message: String?)) -> Void) {
+    static func fidelityStatus(wallet: JMWallet, completion: @escaping ((exists: Bool?, message: String?)) -> Void) {
         JMUtils.display(wallet: wallet) { (detail, message) in
             guard let detail = detail else {
                 completion((nil, message))
@@ -426,7 +303,7 @@ class JMUtils {
         }
     }
     
-    static func fidelityAddress(wallet: Wallet, date: String, completion: @escaping ((address: String?, message: String?)) -> Void) {
+    static func fidelityAddress(wallet: JMWallet, date: String, completion: @escaping ((address: String?, message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .gettimelockaddress(jmWallet: wallet, date: date), param: nil) { (response, errorDesc) in
             guard let dict = response as? [String:Any],
             let address = dict["address"] as? String else {
@@ -448,7 +325,7 @@ class JMUtils {
         }
     }
     
-    static func unfreezeFb(wallet: Wallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
+    static func unfreezeFb(wallet: JMWallet, completion: @escaping ((response: [String:Any]?, message: String?)) -> Void) {
         JMRPC.sharedInstance.command(method: .listutxos(jmWallet: wallet), param: nil) { (response, errorDesc) in
             guard let response = response as? [String:Any],
                     !response.isEmpty,
@@ -489,7 +366,7 @@ class JMUtils {
         }
     }
     
-    static func directSend(wallet: Wallet, address: String, amount: Int, mixdepth: Int, completion: @escaping ((jmTx: JMTx?, message: String?)) -> Void) {
+    static func directSend(wallet: JMWallet, address: String, amount: Int, mixdepth: Int, completion: @escaping ((jmTx: JMTx?, message: String?)) -> Void) {
         let param:[String:Any] = [
             "mixdepth":mixdepth,
             "amount_sats":amount,
