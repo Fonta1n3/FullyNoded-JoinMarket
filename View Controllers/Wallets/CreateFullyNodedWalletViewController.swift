@@ -364,7 +364,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
     }
     
     private func promptToLockWallets() {
-        CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
+        CoreDataService.retrieveEntity(entityName: .jmWallets) { wallets in
             guard let wallets = wallets else { return }
             
             DispatchQueue.main.async { [weak self] in

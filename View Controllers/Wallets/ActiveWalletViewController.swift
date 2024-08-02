@@ -8,9 +8,8 @@
 
 import UIKit
 
-class ActiveWalletViewController: UIViewController {
-    
-    //private var walletInfo: WalletInfo?
+class ActiveWalletViewController: UIViewController, UTXOCellDelegate {
+        
     private var onchainBalanceBtc = ""
     private var onchainBalanceFiat = ""
     private var sectionZeroLoaded = Bool()
@@ -37,26 +36,27 @@ class ActiveWalletViewController: UIViewController {
     private var isBtc = true
     private var initialLoad = true
     private var isRecovering = false
-    var fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+    private var fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
+    private var utxos: [Utxo] = []
     
-    @IBOutlet weak private var currencyControl: UISegmentedControl!
+    @IBOutlet weak private var jmVersionLabel: UILabel!
     @IBOutlet weak private var backgroundView: UIVisualEffectView!
     @IBOutlet weak private var walletTable: UITableView!
     @IBOutlet weak private var sendView: UIView!
     @IBOutlet weak private var invoiceView: UIView!
-    @IBOutlet weak private var utxosView: UIView!
     @IBOutlet weak private var fxRateLabel: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        jmVersionLabel.text = ""
         UserDefaults.standard.setValue(false, forKey: "hasPromptedToRescan")
         walletTable.delegate = self
         walletTable.dataSource = self
+        walletTable.register(UINib(nibName: UTXOCell.identifier, bundle: nil), forCellReuseIdentifier: UTXOCell.identifier)
         configureUi()
         NotificationCenter.default.addObserver(self, selector: #selector(broadcast(_:)), name: .broadcastTxn, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(signPsbt(_:)), name: .signPsbt, object: nil)
-        setCurrency()
         setNotifications()
         sectionZeroLoaded = false
         addNavBarSpinner()
@@ -64,12 +64,18 @@ class ActiveWalletViewController: UIViewController {
     
     override func viewDidAppear(_ animated: Bool) {
         fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-        currencyControl.setTitle(fiatCurrency.lowercased(), forSegmentAt: 2)
         if initialLoad {
             initialLoad = false
             getFxRate()
         }
     }
+    
+    @IBAction func allWalletsAction(_ sender: Any) {
+        DispatchQueue.main.async {
+            self.performSegue(withIdentifier: "segueToAllWallets", sender: self)
+        }
+    }
+    
     
     private func hideData() {
         DispatchQueue.main.async { [weak self] in
@@ -82,38 +88,7 @@ class ActiveWalletViewController: UIViewController {
             self.walletTable.reloadData()
         }
     }
-    
-    private func setCurrency() {
-        if ud.object(forKey: "unit") != nil {
-            let unit = ud.object(forKey: "unit") as! String
-            var index = 0
-            switch unit {
-            case "btc":
-                index = 0
-                isBtc = true
-                isFiat = false
-            case "fiat":
-                index = 2
-                isFiat = true
-                isBtc = false
-            default:
-                break
-            }
-            
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.currencyControl.selectedSegmentIndex = index
-            }
-            
-        } else {
-            isBtc = true
-            isFiat = false
-            
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.currencyControl.selectedSegmentIndex = 0
-            }
-        }
-    }
-    
+        
     @IBAction func advancedAction(_ sender: Any) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -121,25 +96,6 @@ class ActiveWalletViewController: UIViewController {
             self .performSegue(withIdentifier: "goToInvoiceSetting", sender: nil)
         }
     }
-    
-    
-    @IBAction func switchCurrency(_ sender: UISegmentedControl) {
-        switch sender.selectedSegmentIndex {
-        case 0:
-            isFiat = false
-            isBtc = true
-            ud.set("btc", forKey: "unit")
-        case 1:
-            isFiat = true
-            isBtc = false
-            ud.set("fiat", forKey: "unit")
-        default:
-            break
-        }
-        
-        reloadTable()
-    }
-    
     
     @objc func signPsbt(_ notification: NSNotification) {
         print("signPsbt")
@@ -188,7 +144,6 @@ class ActiveWalletViewController: UIViewController {
     private func configureUi() {
         configureButton(sendView)
         configureButton(invoiceView)
-        configureButton(utxosView)
         
         fxRateLabel.text = ""
         
@@ -244,6 +199,7 @@ class ActiveWalletViewController: UIViewController {
     }
     
     @IBAction func invoiceAction(_ sender: Any) {
+        guard let _ = wallet else { return }
         DispatchQueue.main.async { [unowned vc = self] in
             vc.performSegue(withIdentifier: "segueToInvoice", sender: vc)
         }
@@ -768,61 +724,148 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func getWalletBalance() {
-        print("getWalletBalance")
         guard let wallet = wallet else {
+            removeSpinner()
+            
+            CoreDataService.retrieveEntity(entityName: .newNodes) { [weak self] nodes in
+                guard let self = self else { return }
+                
+                guard let nodes = nodes, nodes.count > 0 else {
+                    promptToAddNode()
+                    return
+                }
+                
+                CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] jmWallets in
+                    guard let self = self else { return }
+                    
+                    guard let jmWallets = jmWallets, jmWallets.count > 0 else {
+                        promptToCreateWallet()
+                        return
+                    }
+                    
+                    promptToChooseWallet()
+                }
+            }
+            
+            
             return
         }
         
-            JMRPC.sharedInstance.command(method: .listutxos(jmWallet: wallet), param: nil) { [weak self] (response, errorDesc) in
-                guard let self = self else { return }
-                guard let response = response as? [String:Any] else {
-                    if errorDesc == "Invalid credentials." {
-//                        JMUtils.unlockWallet(wallet: self.wallet!) { (unlockedWallet, unlock_message) in
-//                            guard let _ = unlockedWallet else {
-//                                showAlert(vc: self, title: "", message: unlock_message ?? "Unknown error unlocking wallet.")
-//                                return
-//                            }
-////                            CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
-////                                for w in wallets! {
-////                                    if w["id"] != nil {
-////                                            self.wallet = s
-////                                            self.getWalletBalance()
-////                                    }
-////                                }
-////                            }
-//                        }
-                    } else {
-                        removeSpinner()
-                        print("ding ding")
-                        if errorDesc == "No nodes added." {
-                            
-                            promptToAddNode()
-                        } else {
-                            showAlert(vc: self, title: "", message: errorDesc ?? "Unknown issue getting jm utxos.")
-                        }
-                        
+        JMRPC.sharedInstance.command(method: .listutxos(jmWallet: wallet), param: nil) { [weak self] (response, errorDesc) in
+            guard let self = self else { return }
+            
+            removeSpinner()
+            
+            guard let response = response as? [String:Any] else {
+                if errorDesc == "No nodes added." {
+                    promptToAddNode()
+                } else if errorDesc!.hasPrefix("Unauthorized") {
+                    promptToUnlock()
+                } else {
+                    showAlert(vc: self, title: "", message: errorDesc ?? "Unknown issue getting jm utxos.")
+                }
+                
+                return
+            }
+            
+            guard let utxos = response["utxos"] as? [[String:Any]] else {
+                return
+            }
+            
+            var totalBalance = 0.0
+            
+            for (i, utxo) in utxos.enumerated() {
+                let value = utxo["value"] as! Int
+                let amountBtc = Utxo(utxo).amount!
+                totalBalance += amountBtc
+                self.utxos.append(Utxo(utxo))
+                
+                if i + 1 == utxos.count {
+                    self.utxos = self.utxos.sorted {
+                        $0.confs ?? 0 < $1.confs ?? 1
                     }
-                    
-                    return
-                }
-                guard let utxos = response["utxos"] as? [[String:Any]] else { return }
-                var totalBalance = 0.0
-                for utxo in utxos {
-                    let value = utxo["value"] as! Int
-                    totalBalance += value.satsToBtcDouble
-                }
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    totalBalance = Double(round(100000000 * totalBalance) / 100000000)
-                    self.onchainBalanceBtc = totalBalance.btcBalanceWithSpaces
-                    self.sectionZeroLoaded = true
-                    self.walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
+                    self.finishedLoading()
                 }
             }
+            
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                totalBalance = Double(round(100000000 * totalBalance) / 100000000)
+                self.onchainBalanceBtc = totalBalance.btcBalanceWithSpaces
+                self.sectionZeroLoaded = true
+                self.walletTable.reloadSections(IndexSet.init(arrayLiteral: 0), with: .fade)
+                
+//                JMRPC.sharedInstance.command(method: .walletdisplay(jmWallet: wallet), param: nil) { (response, errorDesc) in
+//
+//                }
+                JMRPC.sharedInstance.command(method: .getinfo, param: nil) { (response, errorDesc) in
+                    guard let response = response as? [String: Any] else { return }
+                    
+                    guard let version = response["version"] as? String else { return }
+                    
+                    DispatchQueue.main.async {
+                        self.jmVersionLabel.text = "Join Market v" + version
+                    }
+                }
+            }
+        }
     }
     
     
-    
+    private func promptToUnlock() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let alert = UIAlertController(title: "Wallet locked, unlock it?", message: "", preferredStyle: .alert)
+
+            alert.addTextField { passwordField1 in
+                passwordField1.placeholder = "Password"
+                passwordField1.isSecureTextEntry = true
+            }
+
+            alert.addAction(UIAlertAction(title: "Unlock \(wallet!.name)", style: .default, handler: { [weak self] _ in
+                guard let self = self else { return }
+                
+                let password = alert.textFields![0].text
+                
+                if let password = password {
+                    spinner.addConnectingView(vc: self, description: "")
+                    
+                    JMUtils.unlockWallet(password: password, wallet: wallet!) { [weak self] (unlockedWallet, message) in
+                        guard let self = self else { return }
+                        
+                        spinner.removeConnectingView()
+                        
+                        guard let _ = unlockedWallet else {
+                            showAlert(vc: self, title: "Error unlocking your wallet...", message: message ?? "Unknown.")
+                            return
+                        }
+                        
+                        showAlert(vc: self, title: "", message: "\(wallet!.name.capitalized) unlocked ✓")
+                        
+                        CoreDataService.retrieveEntity(entityName: .jmWallets) { jmWallets in
+                            guard let jmWallets = jmWallets else { return }
+                            
+                            for jmWallet in jmWallets {
+                                let w = JMWallet(jmWallet)
+                                
+                                if w.active {
+                                    self.wallet = w
+                                    self.getWalletBalance()
+                                }
+                            }
+                        }
+                    }
+                    
+                } else {
+                    showAlert(vc: self, title: "Passwords don't match...", message: "Try again.")
+                }
+                
+            }))
+
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
     
    
     
@@ -929,58 +972,58 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func promptToChooseWallet() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.removeSpinner()
-            
-            let alert = UIAlertController(title: "None of your wallets seem to be toggled on, please choose which wallet you want to use.", message: "", preferredStyle: self.alertStyle)
-            
-            alert.addAction(UIAlertAction(title: "Activate a Fully Noded wallet", style: .default, handler: { action in
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.tabBarController?.selectedIndex = 1
-                    self.goChooseWallet()
-                }
-            }))
-            
-            CoreDataService.retrieveEntity(entityName: .wallets) { potentialJmWallets in
-                guard let potentialJmWallets = potentialJmWallets else { return }
-                
-                var showJMOption = false
-                
-                for (i, potentialJmWallet) in potentialJmWallets.enumerated() {
-                    if potentialJmWallet["id"] != nil {
-                        let wStr = JMWallet(potentialJmWallet)
-                        showJMOption = true
-                        
-                        if i + 1 == potentialJmWallets.count && showJMOption {
-                            alert.addAction(UIAlertAction(title: "Activate a Join Market wallet", style: .default, handler: { action in
-                                DispatchQueue.main.async { [weak self] in
-                                    guard let self = self else { return }
-                                    
-                                    JMUtils.wallets { (response, message) in
-                                        guard let jmwallets = response else {
-                                            self.finishedLoading()
-                                            showAlert(vc: self, title: "", message: message ?? "Unknown issue getting your JM wallets.")
-                                            return
-                                        }
-                                        
-                                        if jmwallets.count > 0 {
-                                            self.promptToChooseJmWallet(jmWallets: jmwallets)
-                                        }
-                                    }
-                                }
-                            }))
-                        }
-                    }
-                }
-            }
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self = self else { return }
+//            self.removeSpinner()
+//            
+//            let alert = UIAlertController(title: "None of your wallets seem to be toggled on, please choose which wallet you want to use.", message: "", preferredStyle: self.alertStyle)
+//            
+//            alert.addAction(UIAlertAction(title: "Activate a Fully Noded wallet", style: .default, handler: { action in
+//                DispatchQueue.main.async { [weak self] in
+//                    guard let self = self else { return }
+//                    
+//                    self.tabBarController?.selectedIndex = 1
+//                    self.goChooseWallet()
+//                }
+//            }))
+//            
+//            CoreDataService.retrieveEntity(entityName: .wallets) { potentialJmWallets in
+//                guard let potentialJmWallets = potentialJmWallets else { return }
+//                
+//                var showJMOption = false
+//                
+//                for (i, potentialJmWallet) in potentialJmWallets.enumerated() {
+//                    if potentialJmWallet["id"] != nil {
+//                        let wStr = JMWallet(potentialJmWallet)
+//                        showJMOption = true
+//                        
+//                        if i + 1 == potentialJmWallets.count && showJMOption {
+//                            alert.addAction(UIAlertAction(title: "Activate a Join Market wallet", style: .default, handler: { action in
+//                                DispatchQueue.main.async { [weak self] in
+//                                    guard let self = self else { return }
+//                                    
+//                                    JMUtils.wallets { (response, message) in
+//                                        guard let jmwallets = response else {
+//                                            self.finishedLoading()
+//                                            showAlert(vc: self, title: "", message: message ?? "Unknown issue getting your JM wallets.")
+//                                            return
+//                                        }
+//                                        
+//                                        if jmwallets.count > 0 {
+//                                            self.promptToChooseJmWallet(jmWallets: jmwallets)
+//                                        }
+//                                    }
+//                                }
+//                            }))
+//                        }
+//                    }
+//                }
+//            }
+//            
+//            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+//            alert.popoverPresentationController?.sourceView = self.view
+//            self.present(alert, animated: true, completion: nil)
+//        }
     }
     
     private func goChooseWallet() {
@@ -1168,6 +1211,7 @@ class ActiveWalletViewController: UIViewController {
             
             vc.isBtc = isBtc
             vc.isFiat = isFiat
+            vc.jmWallet = wallet!
         
         case "segueToSignPsbt":
             guard let vc = segue.destination as? VerifyTransactionViewController else { fallthrough }
@@ -1266,11 +1310,24 @@ extension ActiveWalletViewController: UITableViewDelegate {
                 return blankCell()
             }
         default:
-            if transactionArray.count > 0 {
-                return transactionsCell(indexPath)
+            
+            
+            if utxos.count > 0 {
+                let cell = tableView.dequeueReusableCell(withIdentifier: UTXOCell.identifier, for: indexPath) as! UTXOCell
+                let utxo = utxos[indexPath.section - 1]
+                
+                cell.configure(
+                    utxo: utxo,
+                    isLocked: false,
+                    fxRate: fxRate,
+                    delegate: self
+                )
+                return cell
             } else {
-                return blankCell()
+               return blankCell()
             }
+            
+            
         }
     }
     
@@ -1306,7 +1363,7 @@ extension ActiveWalletViewController: UITableViewDelegate {
         switch section {
         case 0:
             if let w = self.wallet {
-                textLabel.text = w.name + ": " + walletLabel
+                textLabel.text = w.name
             }
             
         case 1:
@@ -1358,8 +1415,8 @@ extension ActiveWalletViewController: UITableViewDataSource {
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
-        if transactionArray.count > 0 {
-            return 1 + transactionArray.count
+        if utxos.count > 0 {
+            return 1 + utxos.count
 
         } else {
             return 2

@@ -28,9 +28,15 @@ public enum JM_REST {
     case unfreeze(jmWallet: JMWallet)
     case listutxos(jmWallet: JMWallet)
     case directSend(jmWallet: JMWallet)
+    case token(jmWallet: JMWallet)
+    case getinfo
     
     var stringValue:String {
         switch self {
+        case .getinfo:
+            return "\(rootUrl)/getinfo"
+        case .token(let wallet):
+            return "\(rootUrl)/token"
         case .walletall:
             return "\(rootUrl)/wallet/all"
         case .session:
@@ -39,7 +45,7 @@ public enum JM_REST {
             return "\(rootUrl)/wallet/create"
         case .lockwallet(let wallet):
             return "\(rootUrl)/wallet/\(wallet.name)/lock"
-        case .unlockwallet(jmWallet: let wallet, let password):
+        case .unlockwallet(jmWallet: let wallet, _):
             return "\(rootUrl)/wallet/\(wallet.name)/unlock"
         case .walletdisplay(jmWallet: let wallet):
             return "\(rootUrl)/wallet/\(wallet.name)/display"

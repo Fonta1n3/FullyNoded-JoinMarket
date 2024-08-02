@@ -188,12 +188,12 @@ public extension String {
         return (Int(self.doubleValue * 100000000.0)).avoidNotation
     }
     
-    var formattedWords: String {
-        var formattedWords = ""
+    var formatted: String {
+        var formatted = ""
         for (i, word) in self.description.split(separator: " ").enumerated() {
-            formattedWords += "\(i + 1). \(word) "
+            formatted += "   \(i + 1).  \(word)   "
         }
-        return formattedWords
+        return formatted
     }
 }
 

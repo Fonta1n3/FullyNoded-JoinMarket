@@ -1417,9 +1417,9 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
 // MARK: UTXOCellDelegate
 
 extension UTXOViewController: UTXOCellDelegate {
-    func didTapToLock(_ utxo: Utxo) {
-        lock(utxo)
-    }
+//    func didTapToLock(_ utxo: Utxo) {
+//        lock(utxo)
+//    }
 }
 
 // Mark: UITableViewDataSource
@@ -1434,9 +1434,6 @@ extension UTXOViewController: UITableViewDataSource {
             utxo: utxo,
             isLocked: false,
             fxRate: fxRate,
-            isSats: isSats,
-            isBtc: isBtc,
-            isFiat: isFiat,
             delegate: self
         )
         

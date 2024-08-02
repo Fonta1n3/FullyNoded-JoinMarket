@@ -9,7 +9,7 @@
 import UIKit
 
 protocol UTXOCellDelegate: AnyObject {
-    func didTapToLock(_ utxo: Utxo)
+//    func didTapToLock(_ utxo: Utxo)
 }
 
 class UTXOCell: UITableViewCell {
@@ -64,7 +64,7 @@ class UTXOCell: UITableViewCell {
         selectionStyle = .none
     }
     
-    func configure(utxo: Utxo, isLocked: Bool, fxRate: Double?, isSats: Bool, isBtc: Bool, isFiat: Bool, delegate: UTXOCellDelegate) {
+    func configure(utxo: Utxo, isLocked: Bool, fxRate: Double?, delegate: UTXOCellDelegate) {
         self.utxo = utxo
         self.isLocked = isLocked
         self.delegate = delegate
@@ -118,13 +118,14 @@ class UTXOCell: UITableViewCell {
         }
                 
         if let amount = utxo.amount {
-            if isFiat {
-                amountLabel.text = utxo.amountFiat ?? "missing fx rate"
-            } else if isBtc {
-                amountLabel.text = amount.btcBalanceWithSpaces
-            } else if isSats {
-                amountLabel.text = amount.sats
-            }
+//            if isFiat {
+//                amountLabel.text = utxo.amountFiat ?? "missing fx rate"
+//            } else if isBtc {
+//                amountLabel.text = amount.btcBalanceWithSpaces
+//            } else if isSats {
+//                amountLabel.text = amount.sats
+//            }
+            amountLabel.text = amount.btcBalanceWithSpaces
             
             if amount <= 0.00010000 {
                 isDustImageView.image = UIImage(systemName: "exclamationmark.triangle")
@@ -219,8 +220,8 @@ class UTXOCell: UITableViewCell {
         }
     }
     
-    @IBAction func lockButtonTapped(_ sender: Any) {
-        delegate.didTapToLock(utxo)
-    }
+//    @IBAction func lockButtonTapped(_ sender: Any) {
+//        //delegate.didTapToLock(utxo)
+//    }
     
 }

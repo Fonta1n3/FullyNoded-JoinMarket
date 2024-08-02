@@ -18,13 +18,15 @@ import Foundation
 
 public struct JMWalletCreated: CustomStringConvertible {
     let seedphrase: String
+    let refresh_token: String
     let token: String
     let walletname: String
     
     init(_ dictionary: [String: Any]) {
         seedphrase = dictionary["seedphrase"] as! String
-        token = dictionary["token"] as! String
+        refresh_token = dictionary["refresh_token"] as! String
         walletname = dictionary["walletname"] as? String ?? ""
+        token = dictionary["token"] as! String
     }
     
     public var description: String {

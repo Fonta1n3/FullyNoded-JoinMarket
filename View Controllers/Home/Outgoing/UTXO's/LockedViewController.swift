@@ -139,9 +139,9 @@ class LockedViewController: UIViewController {
 
 extension LockedViewController: UTXOCellDelegate {
     
-    func didTapToLock(_ utxo: Utxo) {
-        unlock(utxo)
-    }
+//    func didTapToLock(_ utxo: Utxo) {
+//        unlock(utxo)
+//    }
     
     func didTapToEditLabel(_ utxo: Utxo) {}
     
@@ -168,7 +168,7 @@ extension LockedViewController: UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: UTXOCell.identifier, for: indexPath) as! UTXOCell
         let utxo = lockedUtxos[indexPath.section]
         
-        cell.configure(utxo: utxo, isLocked: true, fxRate: fxRate, isSats: isSats, isBtc: isBtc, isFiat: isFiat, delegate: self)
+        cell.configure(utxo: utxo, isLocked: true, fxRate: fxRate, delegate: self)
         
         return cell
     }

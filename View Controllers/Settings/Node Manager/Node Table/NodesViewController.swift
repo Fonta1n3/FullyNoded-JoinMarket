@@ -10,21 +10,16 @@ import UIKit
 
 class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UINavigationControllerDelegate {
     
-    var nodeArray = [[String:Any]]()
-    var selectedIndex = Int()
-    let ud = UserDefaults.standard
-    var addButton = UIBarButtonItem()
-    var editButton = UIBarButtonItem()
-    var isNostr = false
-    var isLightning = false
-    var isJoinMarket = false
-    var isBitcoinCore = false
-    var isLND = false
-    var isCLN = false
+    private var nodeArray = [[String:Any]]()
+    private var selectedIndex = Int()
+    private let ud = UserDefaults.standard
+    private var addButton = UIBarButtonItem()
+    private var editButton = UIBarButtonItem()
     private var now: Date = .now
     private var firstTap: Date?
     private var lastTap: Date?
     private var authenticated = false
+    
     @IBOutlet var nodeTable: UITableView!
     
     override func viewDidLoad() {
@@ -40,10 +35,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     override func viewDidAppear(_ animated: Bool) {
-        isNostr = false
-        isLightning = false
-        isJoinMarket = false
-        isBitcoinCore = false
         getNodes()
     }
     
@@ -245,11 +236,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             }
             
             if nodeArray.count > 1 {
-                
-                
-                
                 for (i, node) in nodeArray.enumerated() {
-                    
                     if i != index {
                         let str = NodeStruct(dictionary: node)
                         
@@ -332,6 +319,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     private func addNodePrompt() {
+        self.segueToAddNodeManually()
 //        DispatchQueue.main.async { [weak self] in
 //            guard let self = self else { return }
 //            
@@ -343,7 +331,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     @IBAction func addNode(_ sender: Any) {
-        addNodePrompt()
+        //addNodePrompt()
+        self.segueToAddNodeManually()
     }
         
     private func segueToAddNodeManually() {

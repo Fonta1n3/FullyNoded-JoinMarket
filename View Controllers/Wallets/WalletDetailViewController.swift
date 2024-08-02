@@ -169,7 +169,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func load() {
-        CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
+        CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] wallets in
             guard let self = self, let wallets = wallets, wallets.count > 0 else { return }
             
 //            for w in wallets {
@@ -392,7 +392,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func deleteNow() {
-        CoreDataService.deleteEntity(id: walletId, entityName: .wallets) { [unowned vc = self] success in
+        CoreDataService.deleteEntity(id: walletId, entityName: .jmWallets) { [unowned vc = self] success in
             if success {
                 DispatchQueue.main.async { [unowned vc = self] in
                     vc.walletDeleted()
@@ -425,7 +425,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func updateLabel(_ newLabel: String) {
-        CoreDataService.update(id: walletId, keyToUpdate: "label", newValue: newLabel, entity: .wallets) { [weak self] success in
+        CoreDataService.update(id: walletId, keyToUpdate: "label", newValue: newLabel, entity: .jmWallets) { [weak self] success in
             guard let self = self else { return }
             
             guard success else {
@@ -453,7 +453,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
     }
     
     private func updateLocalWallet() {
-        CoreDataService.retrieveEntity(entityName: .wallets) { [weak self] wallets in
+        CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] wallets in
             guard let self = self, let wallets = wallets, wallets.count > 0 else { return }
             
             for w in wallets {
@@ -1193,7 +1193,7 @@ class WalletDetailViewController: UIViewController, UITextFieldDelegate, UITable
 //    }
     
     private func updateMaxIndex(max: Int) {
-        CoreDataService.update(id: walletId, keyToUpdate: "maxIndex", newValue: Int64(max), entity: .wallets) { [weak self] success in
+        CoreDataService.update(id: walletId, keyToUpdate: "maxIndex", newValue: Int64(max), entity: .jmWallets) { [weak self] success in
             if success {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }

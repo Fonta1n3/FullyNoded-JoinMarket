@@ -175,7 +175,7 @@ class LogInViewController: UIViewController, UITextFieldDelegate {
                                  .newNodes,
                                  .transactions,
                                  .utxos,
-                                 .wallets]
+                                 .jmWallets]
         
         for entity in entities {
             deleteEntity(entity: entity) { success in

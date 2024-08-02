@@ -54,7 +54,6 @@ class JMRPC {
             }
             
             var onionAddress:String?
-            let sesh = self.torClient.session
             
             if let encAddress = node.onionAddress {
                 onionAddress = decryptedValue(encAddress)
@@ -69,7 +68,7 @@ class JMRPC {
                 self.torClient.cert = decryptedCert.base64EncodedData()
             }
             
-            let walletUrl = "https://\(onionAddress ?? "localhost")/\(method.stringValue)"
+            let walletUrl = "https://\(onionAddress ?? "localhost:28183")/\(method.stringValue)"
             
             guard let url = URL(string: walletUrl) else {
                 completion((nil, "url error"))
@@ -82,7 +81,8 @@ class JMRPC {
             
             switch method {
             case .walletall,
-                    .session:
+                    .session,
+                    .getinfo:
                 httpMethod = "GET"
                 
             case .lockwallet(let wallet),
@@ -102,7 +102,7 @@ class JMRPC {
                 self.token = token
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 
-            case .unlockwallet(jmWallet: let wallet, let password):
+            case .unlockwallet(jmWallet: _, let password):
                 httpMethod = "POST"
                 timeout = 1000
                 paramToUse = ["password": password]
@@ -121,6 +121,17 @@ class JMRPC {
                 httpMethod = "POST"
                 
                 guard let decryptedToken = Crypto.decrypt(wallet.token),
+                      let token = decryptedToken.utf8String else {
+                    completion((nil, "Unable to decrypt token."))
+                    return
+                }
+                self.token = token
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                
+            case .token(jmWallet: let wallet):
+                httpMethod = "POST"
+                
+                guard let decryptedToken = Crypto.decrypt(wallet.refresh_token),
                       let token = decryptedToken.utf8String else {
                     completion((nil, "Unable to decrypt token."))
                     return
@@ -162,7 +173,7 @@ class JMRPC {
 #endif
             
             
-            let task = sesh.dataTask(with: request as URLRequest) { [weak self] (data, response, error) in
+            let task = torClient.session.dataTask(with: request as URLRequest) { [weak self] (data, response, error) in
                 guard let self = self else { return }
                 
                 guard let urlContent = data else {
@@ -195,9 +206,11 @@ class JMRPC {
                 
                 guard let json = try? JSONSerialization.jsonObject(with: urlContent, options: .mutableLeaves) as? NSDictionary else {
                     if let httpResponse = response as? HTTPURLResponse {
+                        print("httpResponse.statusCode: \(httpResponse.statusCode)")
                         switch httpResponse.statusCode {
                         case 401:
-                            completion((nil, "Looks like your rpc credentials are incorrect, please double check them. If you changed your rpc creds in your bitcoin.conf you need to restart your node for the changes to take effect."))
+                            completion((nil, "Unauthorized. Go to settings to request a new token."))
+                            
                         case 403:
                             completion((nil, "The bitcoin-cli \(method) command has not been added to your rpcwhitelist, add \(method) to your bitcoin.conf rpcwhitelsist, reboot Bitcoin Core and try again."))
                         default:

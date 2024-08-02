@@ -11,7 +11,8 @@ import UIKit
 class SeedDisplayerViewController: UIViewController, UINavigationControllerDelegate {
 
     @IBOutlet weak var savedOutlet: UIButton!
-    @IBOutlet weak var textView: UITextView!
+    @IBOutlet var seedWordsLabel: UILabel!
+    @IBOutlet var passwordLabel: UILabel!
     
     var jmWallet: JMWallet!
     var words: String!
@@ -21,48 +22,28 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
         super.viewDidLoad()
         
         navigationController?.delegate = self
-        textView.layer.cornerRadius = 8
-        textView.layer.borderColor = UIColor.lightGray.cgColor
-        textView.layer.borderWidth = 0.5
-        textView.textColor = .systemGreen
         savedOutlet.layer.cornerRadius = 8
         load()
     }
     
     
     @IBAction func savedAction(_ sender: Any) {
-        textView.text = ""
+        seedWordsLabel.text = ""
+        passwordLabel.text = ""
         navigationController?.popToRootViewController(animated: true)
     }
     
-    private func showError(error:String) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            self.textView.text = ""
-            showAlert(vc: self, title: "Error", message: error)
-        }
-    }
     
     private func load() {
-        let message = """
-        Wallet created ✓
-        
-        It is extremely important to save the following information offline! Please write these seed words and password down somewhere safe!
-        
-        Fully Noded does not remember your seed words or password! You can always recover the wallet with the seed words, in order to use the wallet you will need the password.
-        
-        \(words!)
-        
-        Encryption password:
-        
-        \(password!)
-        """
-        
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            textView.text = message
+            seedWordsLabel.text = words.formatted
+            passwordLabel.text = password
+            seedWordsLabel.translatesAutoresizingMaskIntoConstraints = false
+            seedWordsLabel.sizeToFit()
+            passwordLabel.translatesAutoresizingMaskIntoConstraints = false
+            passwordLabel.sizeToFit()
         }
     }
     

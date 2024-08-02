@@ -16,7 +16,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     let spinner = ConnectingView()
     let qrGenerator = QRGenerator()
     var descriptor = ""
-    var wallet = [String:Any]()
+    var jmWallet: JMWallet!
     let ud = UserDefaults.standard
     var isBtc = false
     var isSats = false
@@ -56,6 +56,8 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         } else if isSats {
             denominationControl.selectedSegmentIndex = 1
         }
+        
+        getReceiveAddressJm(wallet: jmWallet)
     }
     
     

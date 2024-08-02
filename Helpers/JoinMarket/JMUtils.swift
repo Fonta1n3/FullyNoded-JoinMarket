@@ -55,10 +55,13 @@ class JMUtils {
             }
             
             let jmWalletCreated = JMWalletCreated(response)
-            let signer = jmWalletCreated.seedphrase
             
-            guard let encryptedToken = Crypto.encrypt(jmWalletCreated.token.utf8),
-                  let encryptedWords = Crypto.encrypt(signer.utf8) else {
+            guard let encryptedToken = Crypto.encrypt(jmWalletCreated.token.utf8) else {
+                completion((nil, nil, "Error encrypting jm wallet credentials."))
+                return
+            }
+            
+            guard let encryptedRefreshToken = Crypto.encrypt(jmWalletCreated.refresh_token.utf8) else {
                 completion((nil, nil, "Error encrypting jm wallet credentials."))
                 return
             }
@@ -66,7 +69,8 @@ class JMUtils {
             let jmWallet: [String:Any] = [
                 "id": UUID(),
                 "token":encryptedToken,
-                "name": label,
+                "refresh_token": encryptedRefreshToken,
+                "name": label + ".jmdat",
                 "active": true
             ]
             
@@ -76,7 +80,7 @@ class JMUtils {
                     return
                 }
                 
-                completion((JMWallet(jmWallet), signer, nil))
+                completion((JMWallet(jmWallet), jmWalletCreated.seedphrase, nil))
             }
         }
     }
@@ -123,8 +127,21 @@ class JMUtils {
                 return
             }
             
-            CoreDataService.update(id: wallet.id, keyToUpdate: "token", newValue: updatedToken, entity: .wallets) { _ in }
-            completion((walletUnlock, nil))            
+            guard let refreshToken = Crypto.encrypt(walletUnlock.refresh_token.utf8) else {
+                completion((nil, "Unable to encrypt refresh token."))
+                return
+            }
+            
+            CoreDataService.update(id: wallet.id, keyToUpdate: "token", newValue: updatedToken, entity: .jmWallets) { tokenUpdated
+                in
+                guard tokenUpdated else { return }
+                
+                CoreDataService.update(id: wallet.id, keyToUpdate: "refresh_token", newValue: refreshToken, entity: .jmWallets) { refreshUpdated in
+                    guard refreshUpdated else { return }
+                    
+                    completion((walletUnlock, nil))
+                }
+            }
         }
     }
 
