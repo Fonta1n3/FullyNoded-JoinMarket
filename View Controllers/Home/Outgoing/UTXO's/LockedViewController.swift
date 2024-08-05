@@ -166,9 +166,9 @@ extension LockedViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: UTXOCell.identifier, for: indexPath) as! UTXOCell
-        let utxo = lockedUtxos[indexPath.section]
+        //let utxo = lockedUtxos[indexPath.section]
         
-        cell.configure(utxo: utxo, isLocked: true, fxRate: fxRate, delegate: self)
+        //cell.configure(utxo: utxo, isLocked: true, fxRate: fxRate, delegate: self)
         
         return cell
     }

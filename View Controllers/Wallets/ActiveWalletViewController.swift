@@ -37,7 +37,7 @@ class ActiveWalletViewController: UIViewController, UTXOCellDelegate {
     private var initialLoad = true
     private var isRecovering = false
     private var fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
-    private var utxos: [Utxo] = []
+    private var utxos: [JMUtxo] = []
     
     @IBOutlet weak private var jmVersionLabel: UILabel!
     @IBOutlet weak private var backgroundView: UIVisualEffectView!
@@ -778,11 +778,11 @@ class ActiveWalletViewController: UIViewController, UTXOCellDelegate {
                 let value = utxo["value"] as! Int
                 let amountBtc = Utxo(utxo).amount!
                 totalBalance += amountBtc
-                self.utxos.append(Utxo(utxo))
+                self.utxos.append(JMUtxo(utxo))
                 
                 if i + 1 == utxos.count {
                     self.utxos = self.utxos.sorted {
-                        $0.confs ?? 0 < $1.confs ?? 1
+                        $0.confirmations < $1.confirmations
                     }
                     self.finishedLoading()
                 }
@@ -1318,7 +1318,6 @@ extension ActiveWalletViewController: UITableViewDelegate {
                 
                 cell.configure(
                     utxo: utxo,
-                    isLocked: false,
                     fxRate: fxRate,
                     delegate: self
                 )

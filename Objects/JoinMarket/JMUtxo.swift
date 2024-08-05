@@ -30,14 +30,15 @@ struct JMUtxo: CustomStringConvertible {
     let utxoString: String
     let frozen: Bool
     let locktime: Date?
-//    let address: String
-//    let label: String
-//    let mixdepth: Int
-//    let path: String
-//    let tries: Int
-//    let tries_remaining: Int
-//    let utxo: String
-//    let value: Int
+    let address: String
+    let label: String
+    let mixdepth: Int
+    let path: String
+    let tries: Int
+    let tries_remaining: Int
+    let value: Int
+    let confirmations: Int
+    var isSelected: Bool
     
     init(_ dict: [String:Any]) {
         utxoString = dict["utxo"] as! String
@@ -52,6 +53,16 @@ struct JMUtxo: CustomStringConvertible {
         } else {
             locktime = nil
         }
+        
+        address = dict["address"] as! String
+        confirmations = dict["confirmations"] as! Int
+        label = dict["label"] as! String
+        mixdepth = dict["mixdepth"] as! Int
+        path =  dict["path"] as! String
+        tries = dict["tries"] as! Int
+        tries_remaining = dict["tries_remaining"] as! Int
+        value = dict["value"] as! Int
+        isSelected = false
     }
     
     public var description: String {
