@@ -23,7 +23,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     var isFiat = false
     
     @IBOutlet weak var invoiceHeader: UILabel!
-    @IBOutlet weak var denominationControl: UISegmentedControl!
     @IBOutlet weak var addressImageView: UIImageView!
     @IBOutlet var amountField: UITextField!
     @IBOutlet var labelField: UITextField!
@@ -49,14 +48,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         invoiceText.text = ""
         qrView.image = generateQrCode(key: "bitcoin:")
         generateOnchainInvoice()
-        
-        if isFiat || isBtc {
-            isBtc = true
-            denominationControl.selectedSegmentIndex = 0
-        } else if isSats {
-            denominationControl.selectedSegmentIndex = 1
-        }
-        
         getReceiveAddressJm(wallet: jmWallet)
     }
     

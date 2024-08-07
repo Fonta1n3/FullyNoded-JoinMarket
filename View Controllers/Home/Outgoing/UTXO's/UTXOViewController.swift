@@ -1394,7 +1394,6 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
             guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
             
             vc.isFidelity = isFidelity
-            vc.isJmarket = isJmarket
             vc.isDirectSend = isDirectSend
             vc.mixdepthToSpendFrom = mixdepth
             vc.jmWallet = wallet
@@ -1417,9 +1416,13 @@ class UTXOViewController: UIViewController, UITextFieldDelegate, UINavigationCon
 // MARK: UTXOCellDelegate
 
 extension UTXOViewController: UTXOCellDelegate {
-//    func didTapToLock(_ utxo: Utxo) {
-//        lock(utxo)
-//    }
+    func didTapToUnfreeze(_ utxo: JMUtxo) {
+        
+    }
+    
+    func didTapToFreeze(_ utxo: JMUtxo) {
+        //lock(utxo)
+    }
 }
 
 // Mark: UITableViewDataSource

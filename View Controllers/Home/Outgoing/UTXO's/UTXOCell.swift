@@ -9,7 +9,8 @@
 import UIKit
 
 protocol UTXOCellDelegate: AnyObject {
-//    func didTapToLock(_ utxo: Utxo)
+    func didTapToFreeze(_ utxo: JMUtxo)
+    func didTapToUnfreeze(_ utxo: JMUtxo)
 }
 
 class UTXOCell: UITableViewCell {
@@ -19,15 +20,14 @@ class UTXOCell: UITableViewCell {
     private var isLocked: Bool!
     private unowned var delegate: UTXOCellDelegate!
     
+    @IBOutlet private weak var unfreezeOutlet: UIButton!
+    @IBOutlet private weak var freezeOutlet: UIButton!
     @IBOutlet private weak var labelOutlet: UILabel!
     @IBOutlet private weak var addressLabel: UILabel!
     @IBOutlet public weak var roundeBackgroundView: UIView!
     @IBOutlet public weak var checkMarkImageView: UIImageView!
     @IBOutlet private weak var confirmationsLabel: UILabel!
     @IBOutlet private weak var amountLabel: UILabel!
-    @IBOutlet private weak var isChangeBackground: UIView!
-    @IBOutlet private weak var isChangeImageView: UIImageView!
-    @IBOutlet private weak var lockButtonOutlet: UIButton!
     @IBOutlet private weak var derivationLabel: UILabel!
     @IBOutlet private weak var mixdepthOutlet: UILabel!
     
@@ -39,9 +39,6 @@ class UTXOCell: UITableViewCell {
         layer.cornerRadius = 8
         
         roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        isChangeBackground.clipsToBounds = true
-        isChangeBackground.layer.cornerRadius = 5
-        isChangeImageView.tintColor = .white
         
         selectionStyle = .none
     }
@@ -59,21 +56,19 @@ class UTXOCell: UITableViewCell {
         mixdepthOutlet.text = "Mixdepth: \(utxo.mixdepth)"
         
         if utxo.frozen {
-            lockButtonOutlet.setImage(UIImage(systemName: "snowflake"), for: .normal)
-            lockButtonOutlet.tintColor = .white
-            lockButtonOutlet.alpha = 1
-        } else {
-            lockButtonOutlet.alpha = 0
-        }
-        
-        if utxo.path.contains("/1/") {
-            isChangeImageView.image = UIImage(systemName: "arrow.2.circlepath")
-            isChangeBackground.backgroundColor = .systemPurple
+            freezeOutlet.alpha = 0.2
+            freezeOutlet.isEnabled = false
+            unfreezeOutlet.alpha = 1
+            unfreezeOutlet.isEnabled = true
             
         } else {
-            isChangeImageView.image = UIImage(systemName: "arrow.down.left")
-            isChangeBackground.backgroundColor = .systemBlue
+            freezeOutlet.alpha = 1
+            freezeOutlet.isEnabled = true
+            unfreezeOutlet.alpha = 0.2
+            unfreezeOutlet.isEnabled = false
         }
+        
+
         derivationLabel.text = utxo.path
         addressLabel.text = utxo.address
         amountLabel.text = utxo.value.satsToBtcDouble.btcBalanceWithSpaces
@@ -134,5 +129,13 @@ class UTXOCell: UITableViewCell {
 //    @IBAction func lockButtonTapped(_ sender: Any) {
 //        //delegate.didTapToLock(utxo)
 //    }
+    
+    @IBAction func freezeAction(_ sender: Any) {
+        delegate.didTapToFreeze(utxo)
+    }
+    
+    @IBAction func unfreezeAction(_ sender: Any) {
+        delegate.didTapToUnfreeze(utxo)
+    }
     
 }

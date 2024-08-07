@@ -38,7 +38,7 @@ struct JMUtxo: CustomStringConvertible {
     let tries_remaining: Int
     let value: Int
     let confirmations: Int
-    var isSelected: Bool
+    var isSelected: Bool    
     
     init(_ dict: [String:Any]) {
         utxoString = dict["utxo"] as! String

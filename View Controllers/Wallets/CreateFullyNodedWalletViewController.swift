@@ -10,10 +10,7 @@ import UIKit
 
 
 class CreateFullyNodedWalletViewController: UIViewController, UINavigationControllerDelegate, UIDocumentPickerDelegate {
-    
-    @IBOutlet weak var multiSigOutlet: UIButton!
-    @IBOutlet weak var singleSigOutlet: UIButton!
-    
+        
     var cosigner:Descriptor?
     var onDoneBlock:(((Bool)) -> Void)?
     var spinner = ConnectingView()
@@ -29,11 +26,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationController?.delegate = self
-        singleSigOutlet.layer.cornerRadius = 8
-        multiSigOutlet.layer.cornerRadius = 8
-        
-       
-        
+
 //        if #available(iOS 17.0, *) {
 //            let reader = NFCReader()
 //            print("reader: \(reader.canBeginSession)")

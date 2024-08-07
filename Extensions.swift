@@ -195,7 +195,22 @@ public extension String {
         }
         return formatted
     }
+    
+    var withSpaces: String {
+        var addressToDisplay = ""
+        for (i, c) in self.enumerated() {
+            addressToDisplay += "\(c)"
+            if i > 0 && i < self.count - 2 {
+                if i.isMultiple(of: 4) {
+                    addressToDisplay += " - "
+                }
+            }
+        }
+        return addressToDisplay
+    }
 }
+
+
 
 //public extension BlockchainInfo {
 //    var size: String {
@@ -289,6 +304,10 @@ public extension Data {
 }
 
 public extension Double {
+    var btcToSats: Int {
+        return Int(self * 100000000.0)
+    }
+    
     func rounded(toPlaces places:Int) -> Double {
         let divisor = Darwin.pow(10.0, Double(places))
         return (self * divisor).rounded() / divisor

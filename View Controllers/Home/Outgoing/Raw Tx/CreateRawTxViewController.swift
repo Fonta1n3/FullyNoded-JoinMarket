@@ -9,19 +9,13 @@
 import UIKit
 
 class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource {
-    var isJmarket = false
+    
     var isDirectSend = false
     var mixdepthToSpendFrom = 0
-    var jmWallet:JMWallet?
-    var isFiat = false
-    var isBtc = true
-    var isSats = false
-    var fxRate:Double?
-    var spendable = Double()
-    var rawTxUnsigned = String()
-    var rawTxSigned = String()
-    var address = String()
-    var amount = String()
+    var jmWallet: JMWallet?
+    var fxRate: Double?
+    var address: String = ""
+    var amount: String = ""
     var outputs:[[String:Any]] = []
     var inputs:[[String:Any]] = []
     var txt = ""
@@ -33,37 +27,23 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     let fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
     var isFidelity = false
     var balance = ""
+    var doubleAmount = 0.0
     
     
     @IBOutlet weak private var balanceLabel: UILabel!
-    @IBOutlet weak private var batchOutlet: UIButton!
-    @IBOutlet weak private var lightningWithdrawOutlet: UIButton!
-    @IBOutlet weak private var miningTargetLabel: UILabel!
-    @IBOutlet weak private var satPerByteLabel: UILabel!
     @IBOutlet weak private var sweepButton: UIStackView!
-    @IBOutlet weak private var segmentedControlOutlet: UISegmentedControl!
-    @IBOutlet weak private var fiatButtonOutlet: UIButton!
     @IBOutlet weak private var fxRateLabel: UILabel!
-    @IBOutlet weak private var denominationImage: UIImageView!
     @IBOutlet weak private var amountIcon: UIView!
     @IBOutlet weak private var addressIcon: UIView!
     @IBOutlet weak private var recipientBackground: UIView!
     @IBOutlet weak private var amountBackground: UIView!
-    @IBOutlet weak private var sliderViewBackground: UIView!
-    @IBOutlet weak private var feeIconBackground: UIView!
-    @IBOutlet weak private var slider: UISlider!
-    @IBOutlet weak private var addOutputOutlet: UIBarButtonItem!
-    @IBOutlet weak private var playButtonOutlet: UIBarButtonItem!
     @IBOutlet weak private var amountInput: UITextField!
     @IBOutlet weak private var addressInput: UITextField!
     @IBOutlet weak private var amountLabel: UILabel!
     @IBOutlet weak private var actionOutlet: UIButton!
     @IBOutlet weak private var scanOutlet: UIButton!
     @IBOutlet weak private var receivingLabel: UILabel!
-    @IBOutlet weak private var outputsTable: UITableView!
     @IBOutlet weak private var addressImageView: UIImageView!
-    @IBOutlet weak private var feeRateInputField: UITextField!
-    @IBOutlet weak var coinSelectionControl: UISegmentedControl!
     
     var spinner = ConnectingView()
     var spendableBalance = Double()
@@ -73,90 +53,19 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         super.viewDidLoad()
         amountInput.delegate = self
         addressInput.delegate = self
-        outputsTable.delegate = self
-        feeRateInputField.delegate = self
-        outputsTable.dataSource = self
-        outputsTable.tableFooterView = UIView(frame: .zero)
-        outputsTable.alpha = 0
-        addressImageView.alpha = 0
-        slider.isContinuous = false
         balanceLabel.text = "Available: \(balance)"
         addTapGesture()
-        
-        sliderViewBackground.layer.cornerRadius = 8
-        sliderViewBackground.layer.borderColor = UIColor.darkGray.cgColor
-        sliderViewBackground.layer.borderWidth = 0.5
-        sliderViewBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
         amountBackground.layer.cornerRadius = 8
         amountBackground.layer.borderColor = UIColor.darkGray.cgColor
         amountBackground.layer.borderWidth = 0.5
         amountBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
         recipientBackground.layer.cornerRadius = 8
         recipientBackground.layer.borderColor = UIColor.darkGray.cgColor
         recipientBackground.layer.borderWidth = 0.5
         recipientBackground.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-        
         amountIcon.layer.cornerRadius = 5
-        feeIconBackground.layer.cornerRadius = 5
         addressIcon.layer.cornerRadius = 5
-        
         addressImageView.layer.magnificationFilter = .nearest
-        
-        slider.addTarget(self, action: #selector(setFee), for: .allEvents)
-        slider.maximumValue = 2 * -1
-        slider.minimumValue = 432 * -1
-        
-        segmentedControlOutlet.setTitle(fiatCurrency.lowercased(), forSegmentAt: 2)
-        
-        if ud.object(forKey: "feeTarget") != nil {
-            let numberOfBlocks = ud.object(forKey: "feeTarget") as! Int
-            slider.value = Float(numberOfBlocks) * -1
-            updateFeeLabel(label: miningTargetLabel, numberOfBlocks: numberOfBlocks)
-        } else {
-            miningTargetLabel.text = "Minimum fee set (you can always bump it)"
-            slider.value = 432 * -1
-            ud.set(432, forKey: "feeTarget")
-        }
-        
-        if ud.object(forKey: "unit") != nil {
-            let unit = ud.object(forKey: "unit") as! String
-            var index = 0
-            switch unit {
-            case "btc":
-                index = 0
-                isBtc = true
-                isFiat = false
-                isSats = false
-                btcEnabled()
-            case "fiat":
-                index = 2
-                isFiat = true
-                isBtc = false
-                isSats = false
-                fiatEnabled()
-            default:
-                break
-            }
-            
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.segmentedControlOutlet.selectedSegmentIndex = index
-            }
-            
-        } else {
-            isBtc = true
-            isFiat = false
-            isSats = false
-            btcEnabled()
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.segmentedControlOutlet.selectedSegmentIndex = 0
-            }
-        }
-        
-        showFeeSetting()
-        slider.addTarget(self, action: #selector(didFinishSliding(_:)), for: .valueChanged)
-        
         amountInput.text = ""
         if address != "" {
             addAddress(address)
@@ -293,32 +202,8 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     }
     
     
-    @IBAction func switchCoinSelectionAction(_ sender: Any) {
-        switch coinSelectionControl.selectedSegmentIndex {
-        case 0:
-            showAlert(vc: self, title: "Standard", message: "This defaults to Bitcoin Core coin selection.")
-        case 1:
-            showAlert(vc: self, title: "Blind", message: "Blind psbts are designed to be joined with another user before broadcasting. They may be useful to gain a bit more privacy for your day to day transactions.")
-        case 2:
-            showAlert(vc: self, title: "Coinjoin", message: "Coinjoin psbts are designed to be joined with other users. Export the psbt encrypted to allow others to easily join. Only one input and one output will be added at a time. The amount sent should match the amount of your utxo or this will fail.")
-        default:
-            break
-        }
-    }
     
     
-    @IBAction func closeFeeRate(_ sender: Any) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            UserDefaults.standard.removeObject(forKey: "feeRate")
-            self.feeRateInputField.text = ""
-            self.slider.alpha = 1
-            self.miningTargetLabel.alpha = 1
-            self.feeRateInputField.endEditing(true)
-            self.showFeeSetting()
-        }
-    }
     
     
     @IBAction func pasteAction(_ sender: Any) {
@@ -348,8 +233,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            self.rawTxSigned = ""
-            self.rawTxUnsigned = ""
             self.amountInput.resignFirstResponder()
             self.addressInput.resignFirstResponder()
         }
@@ -369,27 +252,12 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             return
         }
         
-        switch coinSelectionControl.selectedSegmentIndex {
+        if isDirectSend {
+            self.chooseMixdepthToSpendFrom()
             
-        case 0:
-            if isDirectSend {
-                self.chooseMixdepthToSpendFrom()
-                
-            } else if isJmarket {
-                guard let jmWallet = jmWallet else { return }
-                promptToCoinjoinWithJM(wallet: jmWallet, recipient: addressInput, amount: amount)
-            } else {
-                tryRaw()
-            }
-            
-//            case 1:
-//                self.createBlindNow(amount: amount.doubleValue, recipient: addressInput, strict: false)
-//
-//            case 2:
-//                self.createBlindNow(amount: amount.doubleValue, recipient: addressInput, strict: true)
-            
-        default:
-            break
+        } else {
+            guard let jmWallet = jmWallet else { return }
+            promptToCoinjoinWithJM(wallet: jmWallet, recipient: addressInput, amount: amount)
         }
     }
     
@@ -416,91 +284,95 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func promptToDirectSendWithJM(wallet: JMWallet, recipient: String, amount: Int, mixdepth: Int) {
-        //let counter = Int.random(in: 5...15)
+    private func promptToDirectSendWithJM(wallet: JMWallet, recipient: String, amount: Double, mixdepth: Int) {
+        self.doubleAmount = amount
+        print("doubleAmount: \(doubleAmount)")
+        self.mixdepthToSpendFrom = mixdepth
+        
+        //let counter = Int.random(in: 5...1)
         //let sats = Int(Double(amount)! * 100000000.0)
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            let alert = UIAlertController(title: "Direct send with Join Market?", message: "You will *not* be prompted with the transaction verifier when using Join Market to direct send!\n\nMake sure you are happy with the following as there is no going back:\n\nsats: \(amount)\naddress: \(recipient)\nfrom mixdepth: \(mixdepth)", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "Direct send", style: .default, handler: { action in
-                JMUtils.directSend(wallet: wallet, address: recipient, amount: amount, mixdepth: mixdepth) { [weak self] (jmTx, message) in
-                    guard let self = self else { return }
-                    
-                    self.spinner.removeConnectingView()
-                    
-                    guard let jmTx = jmTx, let txid = jmTx.txid else {
-                        showAlert(vc: self, title: "No transaction info received...", message: "Message: \(message ?? "unknown")")
-                        return
-                    }
-                    
-                    func done() {
-                        DispatchQueue.main.async { [weak self] in
-                            guard let self = self else { return }
-
-                            let alert = UIAlertController(title: "Sent ✓", message: "joinmarket direct send sent.", preferredStyle: .alert)
-                            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
-                                DispatchQueue.main.async { [weak self] in
-                                    guard let self = self else { return }
-
-                                    self.navigationController?.popToRootViewController(animated: true)
-                                }
-                            }))
-                            alert.popoverPresentationController?.sourceView = self.view
-                            self.present(alert, animated: true, completion: nil)
-                        }
-                    }
-                    
-                    FiatConverter.sharedInstance.getFxRate { [weak self] fxRate in
-                        guard let self = self else { return }
-                        
-                        var dict:[String:Any] = ["txid": txid,
-                                                 "id": UUID(),
-                                                 "memo": "JM Direct Send",
-                                                 "date": Date(),
-                                                 "label": "JM Direct Send",
-                                                 "fiatCurrency": self.fiatCurrency]
-                        
-                        self.spinner.removeConnectingView()
-                        
-                        guard let originRate = fxRate else {
-                            CoreDataService.saveEntity(dict: dict, entityName: .transactions) { _ in
-                                done()
-                            }
-                            
-                            return
-                        }
-                        
-                        dict["originFxRate"] = originRate
-                        
-                        CoreDataService.saveEntity(dict: dict, entityName: .transactions) { _ in
-                            done()
-                        }
-                    }
-                    
-                }
-            }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
+            self?.performSegue(withIdentifier: "segueToSendConfirmation", sender: self)
+//            guard let self = self else { return }
+//            let alert = UIAlertController(title: "Direct send with Join Market?", message: "You will *not* be prompted with the transaction verifier when using Join Market to direct send!\n\nMake sure you are happy with the following as there is no going back:\n\nsats: \(amount)\naddress: \(recipient)\nfrom mixdepth: \(mixdepth)", preferredStyle: .alert)
+//            alert.addAction(UIAlertAction(title: "Direct send", style: .default, handler: { action in
+//                JMUtils.directSend(wallet: wallet, address: recipient, amount: amount, mixdepth: mixdepth) { [weak self] (jmTx, message) in
+//                    guard let self = self else { return }
+//                    
+//                    self.spinner.removeConnectingView()
+//                    
+//                    guard let jmTx = jmTx, let txid = jmTx.txid else {
+//                        showAlert(vc: self, title: "No transaction info received...", message: "Message: \(message ?? "unknown")")
+//                        return
+//                    }
+//                    
+//                    func done() {
+//                        DispatchQueue.main.async { [weak self] in
+//                            guard let self = self else { return }
+//
+//                            let alert = UIAlertController(title: "Sent ✓", message: "joinmarket direct send sent.", preferredStyle: .alert)
+//                            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
+//                                DispatchQueue.main.async { [weak self] in
+//                                    guard let self = self else { return }
+//
+//                                    self.navigationController?.popToRootViewController(animated: true)
+//                                }
+//                            }))
+//                            alert.popoverPresentationController?.sourceView = self.view
+//                            self.present(alert, animated: true, completion: nil)
+//                        }
+//                    }
+//                    
+//                    FiatConverter.sharedInstance.getFxRate { [weak self] fxRate in
+//                        guard let self = self else { return }
+//                        
+//                        var dict:[String:Any] = ["txid": txid,
+//                                                 "id": UUID(),
+//                                                 "memo": "JM Direct Send",
+//                                                 "date": Date(),
+//                                                 "label": "JM Direct Send",
+//                                                 "fiatCurrency": self.fiatCurrency]
+//                        
+//                        self.spinner.removeConnectingView()
+//                        
+//                        guard let originRate = fxRate else {
+//                            CoreDataService.saveEntity(dict: dict, entityName: .transactions) { _ in
+//                                done()
+//                            }
+//                            
+//                            return
+//                        }
+//                        
+//                        dict["originFxRate"] = originRate
+//                        
+//                        CoreDataService.saveEntity(dict: dict, entityName: .transactions) { _ in
+//                            done()
+//                        }
+//                    }
+//                    
+//                }
+//            }))
+//            alert.popoverPresentationController?.sourceView = self.view
+//            self.present(alert, animated: true, completion: nil)
         }
     }
     
     private func directSend(mixdepth: Int) {
         guard let jmWallet = jmWallet else { print("no jm wallet."); return }
-        self.spinner.addConnectingView(vc: self, description: "direct sending with JM...")
+        //self.spinner.addConnectingView(vc: self, description: "direct sending with JM...")
         
         var sats = 0
         
         if amount == "0" {
-            if amount == "0" {
-                sats = 0
-            }
+            promptToDirectSendWithJM(wallet: jmWallet, recipient: self.addressInput.text!, amount: 0.0, mixdepth: mixdepth)
         } else {
-            guard let amount = convertedAmount() else { print("cant convert amoount"); return }
-            let dblAmount = amount.doubleValue
-            sats = Int(dblAmount * 100000000.0)
+            guard let amount = convertedAmount() else { print("cant convert amount"); return }
+            promptToDirectSendWithJM(wallet: jmWallet, recipient: self.addressInput.text!, amount: amount.doubleValue, mixdepth: mixdepth)
         }
         
-        promptToDirectSendWithJM(wallet: jmWallet, recipient: self.addressInput.text!, amount: sats, mixdepth: mixdepth)
+        
+        
+        
     }
     
 //    private func createBlindNow(amount: Double, recipient: String, strict: Bool) {
@@ -537,66 +409,22 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             showAlert(vc: self, title: "", message: "Amount needs to be greater than 0.")
             return nil
         }
-        
-        if isFiat {
-            guard let fxRate = fxRate else { return nil }
-            
-            return "\(rounded(number: dblAmount / fxRate).avoidNotation)"
-        } else if isSats {
-            return "\(rounded(number: dblAmount / 100000000.0).avoidNotation)"
-        } else if isBtc {
-            return "\(dblAmount.avoidNotation)"
-        } else {
-            return nil
-        }
+
+        return "\(dblAmount.avoidNotation)"
     }
-    
-    @IBAction func addToBatchAction(_ sender: Any) {
-        guard let address = addressInput.text, address != "", let amount = convertedAmount() else {
-            
-            showAlert(vc: self,
-                      title: "",
-                      message: "You need to fill out a recipient and amount first then tap this button, this button is used for adding multiple recipients aka \"batching\".")
-            return
-        }
-                
-        outputs.append([address:amount])
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            self.outputsTable.alpha = 1
-            self.amountInput.text = ""
-            self.addressInput.text = ""
-            self.outputsTable.reloadData()
-        }
-    }
-    
     
     override func viewDidAppear(_ animated: Bool) {
-        if inputs.count > 0 {
-            if !isJmarket && !isFidelity {
-                showAlert(vc: self, title: "Coin control ✓", message: "Only the utxo's you have just selected will be used in this transaction. You may send the total balance of the *selected utxo's* by tapping the \"⚠️ send all\" button or enter a custom amount as normal.")
-            }
-        }
         
-        if isJmarket && !isFidelity {
+        if !isFidelity && !isDirectSend {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                self.sliderViewBackground.alpha = 0
-                self.lightningWithdrawOutlet.alpha = 0
-                self.batchOutlet.removeFromSuperview()
-                self.coinSelectionControl.alpha = 0
-                    
-                if self.isJmarket {
-                    let title = "Join Market Transaction"
-                    let mess = "Add a recipient address for your coinjoined funds. To remix select the Join Market wallet as the recipient."
-                    let alert = UIAlertController(title: title, message: mess, preferredStyle: .alert)
-                    alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in }))
-                    alert.popoverPresentationController?.sourceView = self.view
-                    self.present(alert, animated: true, completion: nil)
-                }
+                let title = "Join Market Transaction"
+                let mess = "Add a recipient address for your coinjoined funds. To remix select the Join Market wallet as the recipient."
+                let alert = UIAlertController(title: title, message: mess, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in }))
+                alert.popoverPresentationController?.sourceView = self.view
+                self.present(alert, animated: true, completion: nil)
             }
         }
         
@@ -613,74 +441,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         //outputArray.removeAll()
         inputs.removeAll()
         //inputsString = ""
-        isJmarket = false
         isFidelity = false
-    }
-    
-    @IBAction func denominationChanged(_ sender: UISegmentedControl) {
-        switch sender.selectedSegmentIndex {
-        case 0:
-            isFiat = false
-            isBtc = true
-            isSats = false
-            ud.set("btc", forKey: "unit")
-            btcEnabled()
-        case 1:
-            isFiat = true
-            isBtc = false
-            isSats = false
-            ud.set("fiat", forKey: "unit")
-            fiatEnabled()
-        default:
-            break
-        }
-    }
-    
-    private func btcEnabled() {
-        DispatchQueue.main.async { [unowned vc = self] in
-            vc.denominationImage.image = UIImage(systemName: "bitcoinsign.circle")
-            vc.amountIcon.backgroundColor = .systemIndigo
-            vc.spinner.removeConnectingView()
-        }
-    }
-    
-    private func fiatEnabled() {
-        spinner.addConnectingView(vc: self, description: "getting fx rate...")
-        
-        FiatConverter.sharedInstance.getFxRate { [weak self] (fxrate) in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            guard let fxrate = fxrate else {
-                showAlert(vc: self, title: "Error", message: "Could not get current fx rate")
-                return
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.fxRate = fxrate
-                self.fxRateLabel.text = fxrate.exchangeRate
-                switch self.fiatCurrency {
-                case "USD":
-                    self.denominationImage.image = UIImage(systemName: "dollarsign.circle")
-                case "GBP":
-                    self.denominationImage.image = UIImage(systemName: "sterlingsign.circle")
-                case "EUR":
-                    self.denominationImage.image = UIImage(systemName: "eurosign.circle")
-                default:
-                    break
-                }
-                
-                self.amountIcon.backgroundColor = .systemBlue
-                
-                if UserDefaults.standard.object(forKey: "fiatAlert") == nil {
-                    showAlert(vc: self, title: "\(self.fiatCurrency) denomination", message: "You may enter an amount denominated in \(self.fiatCurrency), we will calculate the equivalent amount in BTC based on the current exchange rate of \(fxrate.exchangeRate)")
-                    UserDefaults.standard.set(true, forKey: "fiatAlert")
-                }
-            }
-        }
     }
     
     @IBAction func createPsbt(_ sender: Any) {
@@ -704,47 +465,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             vc.performSegue(withIdentifier: "segueToScannerToGetAddress", sender: vc)
         }
     }
-    
-    @objc func setFee(_ sender: UISlider) {
-        let numberOfBlocks = Int(sender.value) * -1
-        updateFeeLabel(label: miningTargetLabel, numberOfBlocks: numberOfBlocks)
-    }
-    
-    @objc func didFinishSliding(_ sender: UISlider) {
-        estimateSmartFee()
-    }
-    
-    func updateFeeLabel(label: UILabel, numberOfBlocks: Int) {
-        let seconds = ((numberOfBlocks * 10) * 60)
         
-        func updateFeeSetting() {
-            ud.set(numberOfBlocks, forKey: "feeTarget")
-        }
-        
-        DispatchQueue.main.async {
-            if seconds < 86400 {
-                //less then a day
-                if seconds < 3600 {
-                    DispatchQueue.main.async {
-                        //less then an hour
-                        label.text = "Target: \(numberOfBlocks) blocks ~\(seconds / 60) minutes"
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        //more then an hour
-                        label.text = "Target: \(numberOfBlocks) blocks ~\(seconds / 3600) hours"
-                    }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    //more then a day
-                    label.text = "Target: \(numberOfBlocks) blocks ~\(seconds / 86400) days"
-                }
-            }
-            updateFeeSetting()
-        }
-    }
-    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return outputs.count
     }
@@ -804,51 +525,51 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
         }
     }
     
-    private func sweepSelectedUtxos(_ receivingAddress: String) {
-        if isJmarket {
-            //sweepToMix(receivingAddress)
-            showAlert(vc: self, title: "Join Market does not support utxo selection...", message: "You really shouldn't even see this error.")
-        } else {
-            standardSweep(receivingAddress)
-        }
-    }
-    
-    private func standardSweep(_ receivingAddress: String) {
-//        var paramDict:[String:Any] = [:]
-//        paramDict["inputs"] = inputs
-//        paramDict["outputs"] = [[receivingAddress: "\(rounded(number: utxoTotal))"]]
-//        paramDict["bip32derivs"] = true
-//        
-//        if let feeRate = UserDefaults.standard.object(forKey: "feeRate") as? Int {            
-//            paramDict["options"] = ["includeWatching": true, "replaceable": true, "fee_rate": feeRate, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
+//    private func sweepSelectedUtxos(_ receivingAddress: String) {
+//        if isJmarket {
+//            //sweepToMix(receivingAddress)
+//            showAlert(vc: self, title: "Join Market does not support utxo selection...", message: "You really shouldn't even see this error.")
 //        } else {
-//            paramDict["options"] = ["includeWatching": true, "replaceable": true, "conf_target": ud.object(forKey: "feeTarget") as? Int ?? 432, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
+//            standardSweep(receivingAddress)
 //        }
-//        
-//        let param:Wallet_Create_Funded_Psbt = .init(paramDict)
-//        Reducer.sharedInstance.makeCommand(command: .walletcreatefundedpsbt(param: param)) { [weak self] (response, errorMessage) in
-//            guard let self = self else { return }
-//            
-//            guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
-//                self.spinner.removeConnectingView()
-//                displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-//                return
-//            }
-//            
-//            let param_process:Wallet_Process_PSBT = .init(["psbt": psbt1])
-//            Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: param_process)) { [weak self] (response, errorMessage) in
-//                guard let self = self else { return }
-//                
-//                guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
-//                    self.spinner.removeConnectingView()
-//                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
-//                    return
-//                }
-//                
-//                self.sign(psbt: processedPSBT)
-//            }
-//        }
-    }
+//    }
+    
+//    private func standardSweep(_ receivingAddress: String) {
+////        var paramDict:[String:Any] = [:]
+////        paramDict["inputs"] = inputs
+////        paramDict["outputs"] = [[receivingAddress: "\(rounded(number: utxoTotal))"]]
+////        paramDict["bip32derivs"] = true
+////        
+////        if let feeRate = UserDefaults.standard.object(forKey: "feeRate") as? Int {            
+////            paramDict["options"] = ["includeWatching": true, "replaceable": true, "fee_rate": feeRate, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
+////        } else {
+////            paramDict["options"] = ["includeWatching": true, "replaceable": true, "conf_target": ud.object(forKey: "feeTarget") as? Int ?? 432, "subtractFeeFromOutputs": [0], "changeAddress": receivingAddress]
+////        }
+////        
+////        let param:Wallet_Create_Funded_Psbt = .init(paramDict)
+////        Reducer.sharedInstance.makeCommand(command: .walletcreatefundedpsbt(param: param)) { [weak self] (response, errorMessage) in
+////            guard let self = self else { return }
+////            
+////            guard let result = response as? NSDictionary, let psbt1 = result["psbt"] as? String else {
+////                self.spinner.removeConnectingView()
+////                displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+////                return
+////            }
+////            
+////            let param_process:Wallet_Process_PSBT = .init(["psbt": psbt1])
+////            Reducer.sharedInstance.makeCommand(command: .walletprocesspsbt(param: param_process)) { [weak self] (response, errorMessage) in
+////                guard let self = self else { return }
+////                
+////                guard let dict = response as? NSDictionary, let processedPSBT = dict["psbt"] as? String else {
+////                    self.spinner.removeConnectingView()
+////                    displayAlert(viewController: self, isError: true, message: errorMessage ?? "")
+////                    return
+////                }
+////                
+////                self.sign(psbt: processedPSBT)
+////            }
+////        }
+//    }
     
     private func sweepToMix(_ recipient: String) {
         guard let jmWallet = jmWallet else { return }
@@ -918,7 +639,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             self.amount = "0"
             self.chooseMixdepthToSpendFrom()
             
-        } else if isJmarket {
+        } else {
             sweepToMix(receivingAddress)
         }
     }
@@ -1027,14 +748,8 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                   return
               }
         
-        if inputs.count > 0 {
-            spinner.addConnectingView(vc: self, description: "sweeping selected utxo's...")
-            sweepSelectedUtxos(receivingAddress)
-        } else {
-            
-            spinner.addConnectingView(vc: self, description: "sweeping wallet...")
-            sweepWallet(receivingAddress)
-        }
+        spinner.addConnectingView(vc: self, description: "sweeping wallet...")
+        sweepWallet(receivingAddress)
     }
     
     @IBAction func sweep(_ sender: Any) {
@@ -1078,7 +793,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     @objc func dismissKeyboard(_ sender: UITapGestureRecognizer) {
         amountInput.resignFirstResponder()
         addressInput.resignFirstResponder()
-        feeRateInputField.resignFirstResponder()
     }
         
     //MARK: Textfield methods
@@ -1117,60 +831,8 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     func textFieldDidEndEditing(_ textField: UITextField) {
         textField.resignFirstResponder()
-        
         if textField == addressInput && addressInput.text != "" {
             processBIP21(url: addressInput.text!)
-        }
-        
-        if textField == feeRateInputField {
-            guard let text = textField.text else { return }
-            
-            guard text != "" else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.slider.alpha = 1
-                    self.miningTargetLabel.alpha = 1
-                    
-                    UserDefaults.standard.removeObject(forKey: "feeRate")
-                    
-                    showAlert(vc: self, title: "", message: "Your transaction fee will be determined by the slider. To specify a manual s/vB fee rate add a value greater then 0.")
-                    
-                    self.estimateSmartFee()
-                }
-                
-                return
-            }
-            
-            guard let int = Int(text) else { return }
-            
-            guard int > 0 else {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.feeRateInputField.text = ""
-                    self.slider.alpha = 1
-                    self.miningTargetLabel.alpha = 1
-                    
-                    UserDefaults.standard.removeObject(forKey: "feeRate")
-                    self.estimateSmartFee()
-                    
-                    showAlert(vc: self, title: "", message: "Fee rate must be above 0. To specify a fee rate ensure it is above 0 otherwise the fee defaults to the slider setting.")
-                }
-                
-                return
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.slider.alpha = 0
-                self.miningTargetLabel.alpha = 0
-                self.satPerByteLabel.text = "\(int) s/vB"
-                UserDefaults.standard.setValue(int, forKey: "feeRate")
-                
-                showAlert(vc: self, title: "", message: "Your transaction fee rate has been set to \(int) sats per vbyte. To revert to the slider you can delete the fee rate or set it to 0.")
-            }
         }
     }
     
@@ -1226,19 +888,7 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
 //            }
 //        }
     }
-    
-    private func showFeeSetting() {
-        if UserDefaults.standard.object(forKey: "feeRate") == nil {
-            estimateSmartFee()
-        } else {
-            let feeRate = UserDefaults.standard.object(forKey: "feeRate") as! Int
-            self.slider.alpha = 0
-            self.miningTargetLabel.alpha = 0
-            self.feeRateInputField.text = "\(feeRate)"
-            self.satPerByteLabel.text = "\(feeRate) s/vB"
-        }
-    }
-    
+        
     func processBIP21(url: String) {
         let (address, amount, label, message) = AddressParser.parse(url: url)
         
@@ -1261,12 +911,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
                 if amount != nil {
                     amountText = amount!.avoidNotation
                     self.amountInput.text = amountText
-                    self.segmentedControlOutlet.selectedSegmentIndex = 0
-                    self.isFiat = false
-                    self.isBtc = true
-                    self.isSats = false
-                    self.ud.set("btc", forKey: "unit")
-                    self.btcEnabled()
                 }
                 
                 showAlert(vc: self, title: "BIP21 Invoice\n", message: "Address: \(address)\n\nAmount: \(amountText) btc\n\nLabel: " + (label ?? "no label") + "\n\nMessage: \((message ?? "no message"))")
@@ -1275,7 +919,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     }
     
     func getRawTx() {
-        //self.jmWallet = wallet
         self.chooseMixdepthToSpendFrom()
     }
         
@@ -1301,30 +944,37 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
         case "segueToScannerToGetAddress":
-            if #available(macCatalyst 14.0, *) {
-                guard let vc = segue.destination as? QRScannerViewController else { fallthrough }
+            guard let vc = segue.destination as? QRScannerViewController else { fallthrough }
+            
+            vc.isScanningAddress = true
+            
+            vc.onDoneBlock = { addrss in
+                guard let addrss = addrss else { return }
                 
-                vc.isScanningAddress = true
-                
-                vc.onDoneBlock = { addrss in
-                    guard let addrss = addrss else { return }
-                    
-                    DispatchQueue.main.async { [unowned thisVc = self] in
-                        thisVc.processBIP21(url: addrss)
-                    }
+                DispatchQueue.main.async { [unowned thisVc = self] in
+                    thisVc.processBIP21(url: addrss)
                 }
             }
             
-        case "segueToBroadcaster":
-            guard let vc = segue.destination as? VerifyTransactionViewController else { fallthrough }
+        case "segueToSendConfirmation":
+            guard let vc = segue.destination as? ConfirmDirectSendViewController else { fallthrough }
             
-            vc.hasSigned = true
-            
-            if rawTxSigned != "" {
-                vc.signedRawTx = rawTxSigned
-            } else if rawTxUnsigned != "" {
-                vc.unsignedPsbt = rawTxUnsigned
-            }
+            vc.jmWallet = jmWallet!
+            vc.amount = doubleAmount
+            vc.mixdepth = self.mixdepthToSpendFrom
+            vc.address = self.addressInput.text!
+            vc.totalAvailable = self.balance
+            vc.isFidelity = isFidelity
+//        case "segueToBroadcaster":
+//            guard let vc = segue.destination as? VerifyTransactionViewController else { fallthrough }
+//            
+//            vc.hasSigned = true
+//            
+//            if rawTxSigned != "" {
+//                vc.signedRawTx = rawTxSigned
+//            } else if rawTxUnsigned != "" {
+//                vc.unsignedPsbt = rawTxUnsigned
+//            }
             
         default:
             break
