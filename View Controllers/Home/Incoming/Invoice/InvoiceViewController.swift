@@ -47,7 +47,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         addressOutlet.text = ""
         invoiceText.text = ""
         qrView.image = generateQrCode(key: "bitcoin:")
-        generateOnchainInvoice()
         getReceiveAddressJm(wallet: jmWallet)
     }
     
@@ -140,21 +139,15 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     
         
     @IBAction func generateOnchainAction(_ sender: Any) {
-        generateOnchainInvoice()
-    }
-    
-    func generateOnchainInvoice() {
-        spinner.addConnectingView(vc: self, description: "fetching address...")
-        
-        print("generate address")
+       getReceiveAddressJm(wallet: jmWallet)
     }
     
     private func getReceiveAddressJm(wallet: JMWallet) {
+        spinner.addConnectingView(vc: self, description: "fetching address...")
+        
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
+                        
             let title = "Select a mixdepth to deposit to."
             
             let alert = UIAlertController(title: title, message: "", preferredStyle: .alert)
@@ -189,47 +182,29 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
                 self.getJmAddressFromMixDepth(mixDepth: 4, wallet: wallet)
             }))
             
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [weak self] action in
+                self?.spinner.removeConnectingView()
+            }))
+            
             alert.popoverPresentationController?.sourceView = self.view
             self.present(alert, animated: true, completion: nil)
         }
     }
     
     private func getJmAddressFromMixDepth(mixDepth: Int, wallet: JMWallet) {
-        spinner.addConnectingView(vc: self, description: "getting address from jm...")
-        var w = wallet
-        JMRPC.sharedInstance.command(method: .getaddress(jmWallet: w, mixdepth: mixDepth), param: nil) { [weak self] (response, errorDesc) in
+        JMRPC.sharedInstance.command(method: .getaddress(jmWallet: wallet, mixdepth: mixDepth), param: nil) { [weak self] (response, errorDesc) in
             guard let self = self else { return }
+            self.spinner.removeConnectingView()
             
-            if errorDesc == "Invalid credentials." {
-                // Prompt to unlock
-                
-//                JMUtils.unlockWallet(wallet: w) { [weak self] (unlockedWallet, message) in
-//                    guard let self = self else { return }
-//                    guard let unlockedWallet = unlockedWallet else { return }
-//
-//                    guard let encryptedToken = Crypto.encrypt(unlockedWallet.token.utf8) else {
-//                        self.spinner.removeConnectingView()
-//                        showAlert(vc: self, title: "", message: "Unable to decrypt your jm auth token.")
-//                        return
-//                    }
-//
-//                    w.token = encryptedToken
-//                    self.getJmAddressFromMixDepth(mixDepth: mixDepth, wallet: w)
-//                }
-                
-            } else {
-                guard let response = response as? [String:Any],
-                      let address = response["address"] as? String else {
-                    showAlert(vc: self, title: "", message: errorDesc ?? "unknown error getting jm address.")
-                    return
-                }
-                self.spinner.removeConnectingView()
-                self.showAddress(address: address)
+            guard let response = response as? [String:Any],
+                  let address = response["address"] as? String else {
+                showAlert(vc: self, title: "", message: errorDesc ?? "unknown error getting jm address.")
+                return
             }
+            
+            self.showAddress(address: address)
         }
     }
-    
     
     func showAddress(address: String) {
         DispatchQueue.main.async { [weak self] in
@@ -239,7 +214,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             self.addressOutlet.text = address
             self.addressString = address
             self.updateQRImage()
-            self.addressImageView.image = LifeHash.image(address)
+            //self.addressImageView.image = LifeHash.image(address)
             self.spinner.removeConnectingView()
         }
     }

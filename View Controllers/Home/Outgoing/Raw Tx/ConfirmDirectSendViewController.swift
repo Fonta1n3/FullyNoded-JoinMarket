@@ -54,12 +54,13 @@ class ConfirmDirectSendViewController: UIViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 
-                let alert = UIAlertController(title: "Sent ✓", message: "Join Market direct send.", preferredStyle: .alert)
+                let alert = UIAlertController(title: "Sent ✓", message: txid, preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
                     DispatchQueue.main.async { [weak self] in
                         guard let self = self else { return }
                         
                         // trigger wallet view refresh
+                        NotificationCenter.default.post(name: .refreshWallet, object: nil)
                         
                         self.navigationController?.popToRootViewController(animated: true)
                     }

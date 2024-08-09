@@ -6,15 +6,12 @@
 //  Copyright © 2020 Fontaine. All rights reserved.
 //
 
-import URKit
 import AVFoundation
 import UIKit
-import Bbqr
 
 @available(macCatalyst 14.0, *)
 class QRScannerViewController: UIViewController {
     
-    var isImporting = false
     private var hasScanned = false
     private let avCaptureSession = AVCaptureSession()
     private var stringToReturn = ""
@@ -24,34 +21,19 @@ class QRScannerViewController: UIViewController {
     private let torchButton = UIButton()
     private let closeButton = UIButton()
     private let downSwipe = UISwipeGestureRecognizer()
-    var isQuickConnect = Bool()
-    var isScanningAddress = Bool()
     var onDoneBlock : ((String?) -> Void)?
-    var fromSignAndVerify = Bool()
-    var decoder:URDecoder!
-    var bbqrParts: [String] = []
     private let spinner = ConnectingView()
     private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: UIBlurEffect.Style.dark))
     private var blurArray = [UIVisualEffectView]()
     private var isTorchOn = Bool()
-    private var psbtParts = [[String:String]]()
     
     @IBOutlet weak private var scannerView: UIImageView!
-    @IBOutlet weak private var progressDescriptionLabel: UILabel!
-    @IBOutlet weak private var progressView: UIProgressView!
-    @IBOutlet weak var backgroundView: UIVisualEffectView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        backgroundView.clipsToBounds = true
-        backgroundView.layer.cornerRadius = 8
-        backgroundView.alpha = 0
-        progressDescriptionLabel.alpha = 0
-        progressView.alpha = 0
         configureScanner()
         spinner.addConnectingView(vc: self, description: "")
-        decoder = URDecoder()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -144,51 +126,7 @@ class QRScannerViewController: UIViewController {
             }
         }
     }
-    
-    private func processUrQr(text: String) {
-        guard decoder.result == nil else {
-            guard let result = try? decoder.result?.get() else { return }
             
-            hasScanned = true
-            stopScanning(result.string)
-            return
-        }
-
-        decoder.receivePart(text.lowercased())
-        
-        let expectedParts = decoder.expectedFragmentCount ?? 0
-        
-        guard expectedParts != 0 else {
-            guard let result = try? decoder.result?.get() else { return }
-            hasScanned = true
-            stopScanning(result.string)
-            return
-        }
-        
-        let percentageCompletion = "\(Int(decoder.estimatedPercentComplete * 100))% complete"
-        updateProgress(percentageCompletion, self.decoder.estimatedPercentComplete)
-        hasScanned = false
-    }
-    
-    private func updateProgress(_ progressText: String, _ progressDoub: Double) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            if self.blurArray.count > 0 {
-                for i in self.blurArray {
-                    i.removeFromSuperview()
-                }
-                self.blurArray.removeAll()
-            }
-            
-            self.progressView.setProgress(Float(progressDoub), animated: false)
-            self.progressDescriptionLabel.text = progressText
-            self.backgroundView.alpha = 1
-            self.progressView.alpha = 1
-            self.progressDescriptionLabel.alpha = 1
-        }
-    }
-    
     private func uniq<S : Sequence, T : Hashable>(source: S) -> [T] where S.Iterator.Element == T {
         var buffer = [T]()
         var added = Set<T>()
@@ -200,176 +138,16 @@ class QRScannerViewController: UIViewController {
         }
         return buffer
     }
-    
-    private func parseSpecterAnimatedQr(_ part: String) {
-        var partArray = [String]()
-        let arr = part.split(separator: " ")
-        
-        if arr.count > 0 {
-            var prefix =  "\(arr[0])"
-            let part = "\(arr[1])"
             
-            prefix = prefix.replacingOccurrences(of: "p", with: "")
-            prefix = prefix.replacingOccurrences(of: "of", with: "*")
-            
-            let arr1 = prefix.split(separator: "*")
-            
-            if arr1.count > 0 {
-                if let index = Int(arr1[0]), let count = Int(arr1[1]) {
-                    
-                    var alreadyAdded = false
-                    for (i, item) in psbtParts.enumerated() {
-                        if let existingIndex = item["index"] {
-                            if existingIndex == "\(index)" {
-                                alreadyAdded = true
-                            }
-                        }
-                        
-                        if i + 1 == psbtParts.count {
-                            if !alreadyAdded {
-                                let number = Double(psbtParts.count) / Double(count)
-                                let percentageComplete = "\(Int(number * 100))% complete"
-                                if number < 1.1 {
-                                    self.updateProgress(percentageComplete, number)
-                                }
-                            }
-                        }
-                    }
-                    
-                    if !alreadyAdded {
-                        psbtParts.append(["part":part, "index":"\(index)"])
-                        
-                        if psbtParts.count >= count {
-                            psbtParts.sort(by: {($0["index"]!) < $1["index"]!})
-                            
-                            for (i, item) in psbtParts.enumerated() {
-                                guard let part = item["part"] else { return }
-                                
-                                partArray.append(part)
-                                
-                                if i + 1 == psbtParts.count {
-                                    let unique = uniq(source: partArray)
-                                    let psbtString = unique.joined()
-                                                                    
-                                    if Keys.validPsbt(psbtString) {
-                                        hasScanned = true
-                                        stopScanning(psbtString)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    func continousJoiner(parts: [String]) throws -> ((psbt: String?, descriptor: String?)) {
-        let continousJoiner = ContinuousJoiner()
-        
-        for part in parts {
-            switch try continousJoiner.addPart(part: part) {
-            case .notStarted:
-                #if DEBUG
-                print("not started")
-                #endif
-                
-            case .inProgress(let partsLeft):
-                #if DEBUG
-                print("added item, \(partsLeft) parts left")
-                #endif
-                hasScanned = false
-                
-            case .complete(let joined):
-                hasScanned = true
-                let s = String(decoding: joined.data(), as: UTF8.self)
-                if s.hasPrefix("psbt") {
-                    stopScanning(joined.data().base64EncodedString())
-                } else {
-                    stopScanning(s)
-                }
-            }
-        }
-
-        return ((nil, nil))
-    }
-    
-    private func processBBQr(text: String) {
-        let numberOfQrsBase36 = "\(text[4..<6])"
-        //let qrNumberBase36 = "\(text[6..<8])"
-        let numberOfQrs = strtoul(numberOfQrsBase36, nil, 36)
-        //let qrNumber = strtoul(qrNumberBase36, nil, 36)
-        
-        if !bbqrParts.contains(text) {
-            bbqrParts.append(text)
-            
-            DispatchQueue.main.async {
-                let impact = UIImpactFeedbackGenerator(style: .light)
-                impact.impactOccurred()
-            }
-            
-            let number = Double(bbqrParts.count) / Double(numberOfQrs)
-            let percentageComplete = "\(Int(number * 100))% complete"
-            updateProgress(percentageComplete, number)
-        }
-        
-        guard let result = try? continousJoiner(parts: bbqrParts) else { return }
-        
-        #if DEBUG
-        print("BBQr result: \(result)")
-        #endif
-    }
-    
     private func process(text: String) {
-        let lowercased = text.lowercased()
-        
         #if DEBUG
         print("text: \(text)")
         #endif
         
-        if text.hasPrefix("B$") {
-            processBBQr(text: text)
-            
-        } else if fromSignAndVerify {
-            if lowercased.hasPrefix("ur:crypto-psbt") || lowercased.hasPrefix("ur:bytes") {
-                processUrQr(text: text)
-                
-            } else if Keys.validTx(text) {
-                // its a raw transaction
-                hasScanned = true
-                stopScanning(text)
-            } else if Keys.validPsbt(text) {
-                // its a plain text base64 psbt
-                hasScanned = true
-                stopScanning(text)
-            } else if text.hasPrefix("p") {
-                // could be a specter animated psbt
-                parseSpecterAnimatedQr(text)
-            } else {
-                spinner.removeConnectingView()
-                showAlert(vc: self, 
-                          title: "Unrecognized format",
-                          message: "That is an unrecognized transaction format, please reach out to us so we can add compatibility.")
-            }
-            
-        } else if isImporting {
-            if lowercased.hasPrefix("ur:") {
-                processUrQr(text: lowercased)
-            } else {
-                DispatchQueue.main.async { [unowned vc = self] in
-                    vc.dismiss(animated: true) {
-                        vc.stopScanner()
-                        vc.onDoneBlock!(text)
-                    }
-                }
-            }
-                        
-        } else {
-            DispatchQueue.main.async { [unowned vc = self] in
-                vc.dismiss(animated: true) {
-                    vc.stopScanner()
-                    vc.onDoneBlock!(text)
-                }
+        DispatchQueue.main.async { [unowned vc = self] in
+            vc.dismiss(animated: true) {
+                vc.stopScanner()
+                vc.onDoneBlock!(text)
             }
         }
     }

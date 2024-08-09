@@ -89,9 +89,7 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
                     vc.walletsTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
                 }
             } else {
-                displayAlert(viewController: vc,
-                             isError: true,
-                             message: "We had an error trying to delete that wallet.")
+                showAlert(vc: self, title: "", message: "We had an error trying to delete that wallet.")
             }
         }
     }

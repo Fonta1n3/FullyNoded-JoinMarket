@@ -199,8 +199,9 @@ class SecurityCenterViewController: UIViewController, UITableViewDelegate, UITab
         return KeyChain.getData("UnlockPassword")
     }
     
-    private func hash(_ text: String) -> Data? {
-        return Data(hexString: Crypto.sha256hash(text))
-    }
+//    private func hash(_ text: String) -> Data? {
+//       // return Data(hexString: Crypto.sha256hash(text))
+//        return Crypto.sha
+//    }
         
 }

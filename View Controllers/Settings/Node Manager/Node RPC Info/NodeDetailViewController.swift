@@ -61,10 +61,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         }
     }
     
-    private func hash(_ text: String) -> Data? {
-        return Data(hexString: Crypto.sha256hash(text))
-    }
-    
     @IBAction func scanQuickConnect(_ sender: Any) {
         segueToScanNow()
     }
@@ -171,9 +167,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             }
             
             guard certField.text != "" || onionAddressField.text != "" else {
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "Fill out all fields first")
+                showAlert(vc: self, title: "", message: "Fill out all fields first")
                 return
             }
             save()
@@ -183,12 +177,12 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             
             CoreDataService.update(id: id, keyToUpdate: "label", newValue: nodeLabel.text!, entity: .newNodes) { success in
                 if !success {
-                    displayAlert(viewController: self, isError: true, message: "error updating label")
+                    showAlert(vc: self, title: "", message: "Error updating label.")
                 }
             }
             
             if onionAddressField != nil, let addressText = onionAddressField.text {
-                let decryptedAddress = addressText.dataUsingUTF8StringEncoding
+                let decryptedAddress = addressText.utf8
                 let arr = addressText.split(separator: ":")
                 guard arr.count == 2 else {
                     showAlert(vc: self, title: "Not updated, port missing...", message: "Please make sure you add the port at the end of your onion hostname, such as xjshdu.onion:28183")
@@ -201,7 +195,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                     if success {
                         vc.nodeAddedSuccess()
                     } else {
-                        displayAlert(viewController: vc, isError: true, message: "Error updating node!")
+                        showAlert(vc: self, title: "", message: "Error updating node!")
                     }
                 }
             }
@@ -210,7 +204,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             
             CoreDataService.update(id: id, keyToUpdate: "cert", newValue: encryptedCert, entity: .newNodes) { success in
                 if !success {
-                    displayAlert(viewController: self, isError: true, message: "error updating cert")
+                    showAlert(vc: self, title: "", message: "Error updating cert.")
                 }
             }
             
@@ -403,21 +397,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         
     }
     
-    func addBtcRpcQr(url: String) {
-        QuickConnect.addNode(uncleJim: false, url: url) { [weak self] (success, errorMessage) in
-            if success {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    
-                    self.navigationController?.popViewController(animated: true)
-                    NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                }
-            } else {
-                displayAlert(viewController: self, isError: true, message: "Error adding that node: \(errorMessage ?? "unknown")")
-            }
-        }
-    }
-    
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
         case "segueToBackUpInfo":
@@ -426,16 +405,6 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             vc.jmWallet = self.jmWallet
             vc.password = self.password
             vc.words = self.words
-            
-        case "segueToScanNodeCreds":
-            guard let vc = segue.destination as? QRScannerViewController  else { fallthrough }
-            
-            vc.isQuickConnect = true
-            vc.onDoneBlock = { [unowned thisVc = self] url in
-                if url != nil {
-                    thisVc.addBtcRpcQr(url: url!)
-                }
-            }
             
         default:
             break

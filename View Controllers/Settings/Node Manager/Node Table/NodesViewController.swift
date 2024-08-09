@@ -44,9 +44,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             guard let self = self else { return }
             
             guard let nodes = nodes else {
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "error getting nodes from core data")
+                showAlert(vc: self, title: "", message: "Error getting nodes from core data.")
                 return
             }
             
@@ -189,9 +187,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     vc.nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
                 }
             } else {
-                displayAlert(viewController: vc,
-                             isError: true,
-                             message: "We had an error trying to delete that node")
+                showAlert(vc: self, title: "", message: "We had an error trying to delete that node")
             }
         }
     }
@@ -231,7 +227,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     }
                                         
                 } else {
-                    displayAlert(viewController: vc, isError: true, message: "error updating node")
+                    showAlert(vc: self, title: "", message: "Error updating node.")
                 }
             }
             
@@ -297,17 +293,10 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     }
                     vc.nodeTable.reloadData()
                 }
-                
             } else {
-                
-                displayAlert(viewController: self,
-                             isError: true,
-                             message: "error getting nodes from core data")
-                
+                showAlert(vc: self, title: "", message: "Error getting nodes from core data.")
             }
-            
         }
-        
     }
     
     private func reduced(label: String) -> String {
@@ -347,24 +336,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         }
     }
     
-    private func addBtcRpcQr(url: String) {
-        QuickConnect.addNode(uncleJim: false, url: url) { [weak self] (success, errorMessage) in
-            if success {
-                if !url.hasPrefix("clightning-rpc") && !url.hasPrefix("lndconnect:") && !url.hasPrefix("http") {
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        
-                        NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                        self.tabBarController?.selectedIndex = 0
-                    }
-                } else {
-                    self?.reloadTable()
-                }
-            } else {
-                displayAlert(viewController: self, isError: true, message: "Error adding that node: \(errorMessage ?? "unknown")")
-            }
-        }
-    }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         
@@ -380,22 +351,6 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 vc.createNew = true
             }
         }
-        
-        if segue.identifier == "segueToScanAddNode" {
-            if #available(macCatalyst 14.0, *) {
-                if let vc = segue.destination as? QRScannerViewController {
-                    vc.isQuickConnect = true
-                    vc.onDoneBlock = { [unowned thisVc = self] url in
-                        if url != nil {
-                            thisVc.addBtcRpcQr(url: url!)
-                        }
-                    }
-                }
-            } else {
-                // Fallback on earlier versions
-            }
-        }
-        
     }
 }
 

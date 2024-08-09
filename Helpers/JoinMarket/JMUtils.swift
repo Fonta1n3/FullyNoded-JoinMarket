@@ -9,33 +9,6 @@
 import Foundation
 
 class JMUtils {
-    static func getDescriptors(wallet: JMWallet, completion: @escaping ((descriptors: [String]?,  message: String?)) -> Void) {
-        JMRPC.sharedInstance.command(method: .getSeed(jmWallet: wallet), param: nil) { (response, errorDesc) in
-            guard let dict = response as? [String:Any],
-                  let words = dict["seedphrase"] as? String else {
-                completion((nil, errorDesc))
-                return
-            }
-            
-            let chain = UserDefaults.standard.string(forKey: "chain")
-            var coinType = "0"
-            if chain != "main" {
-                coinType = "1"
-            }
-            
-            guard let mk = Keys.masterKey(words: words, coinType: coinType, passphrase: ""),
-                  let xfp = Keys.fingerprint(masterKey: mk) else {
-                completion((nil, "error deriving mk/xfp."))
-                return
-            }
-            
-            JoinMarket.descriptors(mk, xfp, completion: { descriptors in
-                guard let descriptors = descriptors else { completion((nil, "error deriving descriptors")); return }
-                
-                completion((descriptors, nil))
-            })
-        }
-    }
     
     // Get user to provide encryption password.
     static func createWallet(label: String,
@@ -83,22 +56,6 @@ class JMUtils {
                 completion((JMWallet(jmWallet), jmWalletCreated.seedphrase, nil))
             }
         }
-    }
-    
-    static func getMkXfpBlock(signer: String) -> (mk: String?, xfp: String?, block: Int?) {
-        var cointType = "0"
-        let chain = UserDefaults.standard.object(forKey: "chain") as? String ?? "main"
-        if chain != "main" {
-            cointType = "1"
-        }
-        let blockheight = UserDefaults.standard.object(forKey: "blockheight") as? Int ?? 0
-        
-        guard let mk = Keys.masterKey(words: signer, coinType: cointType, passphrase: ""),
-              let xfp = Keys.fingerprint(masterKey: mk) else {
-                  return (nil, nil, nil)
-              }
-        
-        return (mk, xfp, blockheight)
     }
     
     static func lockWallet(wallet: JMWallet, completion: @escaping ((locked: Bool, message: String?)) -> Void) {

@@ -40,13 +40,13 @@ enum Crypto {
         return try! privkey.signature(for: data)
     }
     
-    static func verify(_ sig: Data, data: Data) -> Bool? {
-        guard let key = KeyChain.getData("privateKey") else { return nil }
-        guard let privkey = try? Curve25519.Signing.PrivateKey(rawRepresentation: key.bytesNostr) else { return nil }
-        let publicKeyData = privkey.publicKey.rawRepresentation
-        let pubKey = try! Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData)
-        return pubKey.isValidSignature(sig, for: data)
-    }
+//    static func verify(_ sig: Data, data: Data) -> Bool? {
+//        guard let key = KeyChain.getData("privateKey") else { return nil }
+//        guard let privkey = try? Curve25519.Signing.PrivateKey(rawRepresentation: key.bytesNostr) else { return nil }
+//        let publicKeyData = privkey.publicKey.rawRepresentation
+//        let pubKey = try! Curve25519.Signing.PublicKey(rawRepresentation: publicKeyData)
+//        return pubKey.isValidSignature(sig, for: data)
+//    }
     
     static func decrypt(_ data: Data) -> Data? {
         guard let key = KeyChain.getData("privateKey"),
@@ -57,19 +57,19 @@ enum Crypto {
         return try? ChaChaPoly.open(box, using: SymmetricKey(data: key))
     }
     
-    static func checksum(_ descriptor: String) -> String {
-        let hash = SHA256.hash(data: Data(SHA256.hash(data: Base58.decode(descriptor))))
-        let checksum = Data(hash).subdata(in: Range(0...3))
-        let hex = checksum.hexString
-        
-        return descriptor + "#" + hex
-    }
+//    static func checksum(_ descriptor: String) -> String {
+//        let hash = SHA256.hash(data: Data(SHA256.hash(data: Base58.decode(descriptor))))
+//        let checksum = Data(hash).subdata(in: Range(0...3))
+//        let hex = checksum.hexString
+//        
+//        return descriptor + "#" + hex
+//    }
     
-    static func checksum(_ data: Data) -> String {
-        let hash = SHA256.hash(data: Data(SHA256.hash(data: data)))
-        let checksum = Data(hash).subdata(in: Range(0...3))
-        return checksum.hexString
-    }
+//    static func checksum(_ data: Data) -> String {
+//        let hash = SHA256.hash(data: Data(SHA256.hash(data: data)))
+//        let checksum = Data(hash).subdata(in: Range(0...3))
+//        return checksum.hexString
+//    }
     
     static func secret() -> Data? {
         var bytes = [UInt8](repeating: 0, count: 32)

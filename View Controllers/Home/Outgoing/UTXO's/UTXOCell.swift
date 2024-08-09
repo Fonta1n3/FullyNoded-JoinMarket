@@ -20,12 +20,13 @@ class UTXOCell: UITableViewCell {
     private var isLocked: Bool!
     private unowned var delegate: UTXOCellDelegate!
     
+    @IBOutlet private weak var locktimeHeaderOutlet: UILabel!
+    @IBOutlet private weak var locktimeOutlet: UILabel!
     @IBOutlet private weak var unfreezeOutlet: UIButton!
     @IBOutlet private weak var freezeOutlet: UIButton!
     @IBOutlet private weak var labelOutlet: UILabel!
     @IBOutlet private weak var addressLabel: UILabel!
     @IBOutlet public weak var roundeBackgroundView: UIView!
-    @IBOutlet public weak var checkMarkImageView: UIImageView!
     @IBOutlet private weak var confirmationsLabel: UILabel!
     @IBOutlet private weak var amountLabel: UILabel!
     @IBOutlet private weak var derivationLabel: UILabel!
@@ -53,7 +54,14 @@ class UTXOCell: UITableViewCell {
             labelOutlet.text = "No label"
         }
         
-        mixdepthOutlet.text = "Mixdepth: \(utxo.mixdepth)"
+        if let locktime = utxo.locktime {
+            locktimeOutlet.text = "Locked until \(locktime)"
+        } else {
+            locktimeOutlet.text = ""
+            locktimeHeaderOutlet.text = ""
+        }
+        
+        mixdepthOutlet.text = "\(utxo.mixdepth)"
         
         if utxo.frozen {
             freezeOutlet.alpha = 0.2
@@ -70,15 +78,11 @@ class UTXOCell: UITableViewCell {
         
 
         derivationLabel.text = utxo.path
-        addressLabel.text = utxo.address
+        addressLabel.text = utxo.address.withSpaces
+        
         amountLabel.text = utxo.value.satsToBtcDouble.btcBalanceWithSpaces
-       
-        if utxo.isSelected {
-            checkMarkImageView.alpha = 1
-            self.roundeBackgroundView.backgroundColor = .darkGray
-        } else {
-            checkMarkImageView.alpha = 0
-            self.roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        if let fxRate = fxRate {
+            amountLabel.text! += " (\((utxo.value.satsToBtcDouble * fxRate).fiatString))"
         }
         
         if utxo.confirmations == 0 {
@@ -89,46 +93,6 @@ class UTXOCell: UITableViewCell {
         
         confirmationsLabel.text = "\(utxo.confirmations) confs"
     }
-    
-    func selectedAnimation() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            UIView.animate(withDuration: 0.2, animations: {
-                self.alpha = 0
-            }) { _ in
-                UIView.animate(withDuration: 0.2, animations: {
-                    self.alpha = 1
-                    self.checkMarkImageView.alpha = 1
-                    self.roundeBackgroundView.backgroundColor = .darkGray
-                    
-                })
-            }
-        }
-    }
-    
-    func deselectedAnimation() {
-        DispatchQueue.main.async {
-            
-            UIView.animate(withDuration: 0.2, animations: { [weak self] in
-                guard let self = self else { return }
-                
-                self.checkMarkImageView.alpha = 0
-                self.alpha = 0
-            }) { _ in
-                
-                UIView.animate(withDuration: 0.2, animations: {
-                    self.alpha = 1
-                    self.roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
-                    
-                })
-            }
-        }
-    }
-    
-//    @IBAction func lockButtonTapped(_ sender: Any) {
-//        //delegate.didTapToLock(utxo)
-//    }
     
     @IBAction func freezeAction(_ sender: Any) {
         delegate.didTapToFreeze(utxo)

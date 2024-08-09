@@ -13,8 +13,6 @@ import Foundation
 public enum ENTITY: String {
     case newNodes = "NewNodes"
     case authKeys = "AuthKeys"
-    case utxos = "Utxos"
-    case transactions = "Transactions"
     case jmWallets = "JMWallets"
 }
 
