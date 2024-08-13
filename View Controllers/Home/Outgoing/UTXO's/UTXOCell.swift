@@ -20,7 +20,6 @@ class UTXOCell: UITableViewCell {
     private var isLocked: Bool!
     private unowned var delegate: UTXOCellDelegate!
     
-    @IBOutlet private weak var locktimeHeaderOutlet: UILabel!
     @IBOutlet private weak var locktimeOutlet: UILabel!
     @IBOutlet private weak var unfreezeOutlet: UIButton!
     @IBOutlet private weak var freezeOutlet: UIButton!
@@ -58,7 +57,6 @@ class UTXOCell: UITableViewCell {
             locktimeOutlet.text = "Locked until \(locktime)"
         } else {
             locktimeOutlet.text = ""
-            locktimeHeaderOutlet.text = ""
         }
         
         mixdepthOutlet.text = "\(utxo.mixdepth)"

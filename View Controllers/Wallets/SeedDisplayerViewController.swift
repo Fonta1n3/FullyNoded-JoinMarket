@@ -30,7 +30,11 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
     @IBAction func savedAction(_ sender: Any) {
         seedWordsLabel.text = ""
         passwordLabel.text = ""
-        navigationController?.popToRootViewController(animated: true)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            NotificationCenter.default.post(name: .refreshWallet, object: nil)
+            navigationController?.popToRootViewController(animated: true)
+        }
     }
     
     

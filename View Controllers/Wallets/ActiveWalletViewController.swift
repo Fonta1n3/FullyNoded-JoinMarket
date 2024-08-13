@@ -214,6 +214,7 @@ class ActiveWalletViewController: UIViewController {
             guard let self = self else { return }
             
             if let message = message {
+                hideJmSpinner()
                 showAlert(vc: self, title: "", message: message)
                 return
             }
@@ -234,12 +235,13 @@ class ActiveWalletViewController: UIViewController {
     private func stopMaker() {
         guard let wallet = self.wallet else { return }
         
-        spinner.addConnectingView(vc: self, description: "stopping maker bot...")
+        //spinner.addConnectingView(vc: self, description: "Stopping maker...")
+        addSpinny()
         
         JMUtils.stopMaker(wallet: wallet) { [weak self] (response, message) in
             guard let self = self else { return }
             
-            self.spinner.removeConnectingView()
+            hideJmSpinner()
             
             guard let response = response else {
                 if let message = message, message != "" {
@@ -249,14 +251,12 @@ class ActiveWalletViewController: UIViewController {
                         DispatchQueue.main.async { [weak self] in
                             guard let self = self else { return }
                             
-                            self.jmStatusImage.tintColor = .systemRed
-                            self.jmStatusLabel.text = "Maker stopped"
-                            self.jmActionOutlet.setTitle("Start", for: .normal)
-                            self.makerRunning = false
-                            self.earnOutlet.tintColor = .systemTeal
-                            //self.jmMixView.tintColor = .systemTeal
-                            self.earnOutlet.isEnabled = true
-                            //self.jmMixView.alpha = 1
+                            jmStatusImage.tintColor = .systemRed
+                            jmStatusLabel.text = "Maker stopped"
+                            jmActionOutlet.setTitle("Start", for: .normal)
+                            makerRunning = false
+                            earnOutlet.tintColor = .systemTeal
+                            earnOutlet.isEnabled = true
                             coinjoinButtonOutlet.isEnabled = true
                         }
                         
@@ -273,15 +273,13 @@ class ActiveWalletViewController: UIViewController {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     
-                    self.jmStatusImage.tintColor = .systemRed
-                    self.jmStatusLabel.text = "maker stopped"
-                    self.jmActionOutlet.setTitle("start", for: .normal)
-                    self.makerRunning = false
-                    self.earnOutlet.tintColor = .systemTeal
-                    //self.jmMixView.tintColor = .systemTeal
-                    //jmMixView.alpha = 1
-                    self.earnOutlet.isEnabled = true
-                    self.coinjoinButtonOutlet.isEnabled = true
+                    jmStatusImage.tintColor = .systemRed
+                    jmStatusLabel.text = "Maker stopped"
+                    jmActionOutlet.setTitle("Start", for: .normal)
+                    makerRunning = false
+                    earnOutlet.tintColor = .systemTeal
+                    earnOutlet.isEnabled = true
+                    coinjoinButtonOutlet.isEnabled = true
                 }
             }
             
@@ -1209,6 +1207,8 @@ class ActiveWalletViewController: UIViewController {
                 }
                 
             }))
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in }))
 
             self.present(alert, animated: true, completion: nil)
         }
@@ -1612,7 +1612,7 @@ extension ActiveWalletViewController: UITableViewDelegate {
                 return 47
             }
         default:
-            if sectionZeroLoaded {
+            if sectionZeroLoaded, utxos.count > 0 {
                 let utxo = utxos[indexPath.section - 1]
                 if let _ = utxo.locktime {
                     return 423

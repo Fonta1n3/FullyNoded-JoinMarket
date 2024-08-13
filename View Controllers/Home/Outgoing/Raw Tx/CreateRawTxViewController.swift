@@ -255,19 +255,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
     
     override func viewDidAppear(_ animated: Bool) {
         
-        if !isFidelity && !isDirectSend {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                let title = "Join Market Coinjoin"
-                let mess = "Add a recipient address for your coinjoined funds."
-                let alert = UIAlertController(title: title, message: mess, preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { _ in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
-            }
-        }
-        
         if isFidelity {
             showAlert(vc: self, title: "Fidelity Bond", message: "⚠️ This is a timelocked address.\n\nFor best privacy practices it is recommended to use the \"Send all\" button to sweep the selected utxo(s) when creating a fidelity bond.\n\n⚠️ WARNING: You should send coins to this address only once. Only single biggest value UTXO will be announced as a fidelity bond. Sending coins to this address multiple times will not increase fidelity bond value. ⚠️ WARNING: Only send coins here which are from coinjoins or otherwise not linked to your identity.")
         }
@@ -286,7 +273,6 @@ class CreateRawTxViewController: UIViewController, UITextFieldDelegate, UITableV
             guard let self = self else { return }
             
             self.addressInput.text = address
-           // self.addressImageView.image = LifeHash.image(address)
             self.addressImageView.alpha = 1
         }
     }

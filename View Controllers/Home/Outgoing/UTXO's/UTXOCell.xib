@@ -22,18 +22,24 @@
                         <rect key="frame" x="0.0" y="0.0" width="320" height="413"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="1000" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="wqB-Pa-JzN">
-                                <rect key="frame" x="237" y="8" width="68" height="14.5"/>
+                                <rect key="frame" x="218" y="8" width="87" height="39"/>
                                 <subviews>
                                     <label opaque="NO" userInteractionEnabled="NO" tag="8" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="1600 Confs" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumScaleFactor="0.5" translatesAutoresizingMaskIntoConstraints="NO" id="Y2N-Mq-EK6">
-                                        <rect key="frame" x="0.0" y="0.0" width="68" height="14.5"/>
-                                        <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="12"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="87" height="19.5"/>
+                                        <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="16"/>
                                         <color key="textColor" systemColor="systemGreenColor"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="  " textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="PRN-hB-Rgf">
+                                        <rect key="frame" x="0.0" y="19.5" width="87" height="19.5"/>
+                                        <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="16"/>
+                                        <color key="textColor" systemColor="systemRedColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                 </subviews>
                             </stackView>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="top" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="F64-us-7JM">
-                                <rect key="frame" x="8" y="30.5" width="304" height="352"/>
+                                <rect key="frame" x="8" y="55" width="304" height="302"/>
                                 <subviews>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Amount" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="xcc-29-4OM">
                                         <rect key="frame" x="0.0" y="0.0" width="44" height="14.5"/>
@@ -59,56 +65,44 @@
                                         <nil key="textColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Locktime" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ZE2-qT-Nhp">
-                                        <rect key="frame" x="0.0" y="102" width="51.5" height="14.5"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="12"/>
-                                        <color key="textColor" systemColor="secondaryLabelColor"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Locktime: " textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="PRN-hB-Rgf">
-                                        <rect key="frame" x="0.0" y="124.5" width="75" height="19.5"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="16"/>
-                                        <nil key="textColor"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Mixdepth" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="gow-0J-GfV">
-                                        <rect key="frame" x="0.0" y="152" width="52.5" height="14.5"/>
+                                        <rect key="frame" x="0.0" y="102" width="52.5" height="14.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="12"/>
                                         <color key="textColor" systemColor="secondaryLabelColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="0" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="kJf-UO-TMk">
-                                        <rect key="frame" x="0.0" y="174.5" width="10.5" height="20.5"/>
+                                        <rect key="frame" x="0.0" y="124.5" width="10.5" height="20.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                         <nil key="textColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Path" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="PUd-BH-siT">
-                                        <rect key="frame" x="0.0" y="203" width="25.5" height="14.5"/>
+                                        <rect key="frame" x="0.0" y="153" width="25.5" height="14.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="12"/>
                                         <color key="textColor" systemColor="secondaryLabelColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="m/84'/0'/0'/0/0" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zPr-I3-SYn">
-                                        <rect key="frame" x="0.0" y="225.5" width="108.5" height="19.5"/>
+                                        <rect key="frame" x="0.0" y="175.5" width="108.5" height="19.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="16"/>
                                         <nil key="textColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Address" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Edp-Vq-Wde">
-                                        <rect key="frame" x="0.0" y="253" width="46.5" height="14.5"/>
+                                        <rect key="frame" x="0.0" y="203" width="46.5" height="14.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="12"/>
                                         <color key="textColor" systemColor="secondaryLabelColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="tb1xxxxx" textAlignment="natural" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="yGO-CI-BUB">
-                                        <rect key="frame" x="0.0" y="275.5" width="304" height="20.5"/>
+                                        <rect key="frame" x="0.0" y="225.5" width="304" height="20.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                         <nil key="textColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <button opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="1000" contentHorizontalAlignment="center" contentVerticalAlignment="center" showsTouchWhenHighlighted="YES" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Fw8-ag-O06">
-                                        <rect key="frame" x="0.0" y="304" width="74" height="20"/>
+                                        <rect key="frame" x="0.0" y="254" width="74" height="20"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="20" id="ONp-wI-zNK"/>
                                         </constraints>
@@ -121,7 +115,7 @@
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" verticalCompressionResistancePriority="1000" contentHorizontalAlignment="center" contentVerticalAlignment="center" showsTouchWhenHighlighted="YES" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="lOQ-5R-kEw">
-                                        <rect key="frame" x="0.0" y="332" width="55" height="20"/>
+                                        <rect key="frame" x="0.0" y="282" width="55" height="20"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="20" id="UMf-kB-pcU"/>
                                         </constraints>
@@ -166,7 +160,6 @@
                 <outlet property="derivationLabel" destination="zPr-I3-SYn" id="gxS-mh-nwM"/>
                 <outlet property="freezeOutlet" destination="lOQ-5R-kEw" id="ciD-oC-iVE"/>
                 <outlet property="labelOutlet" destination="RdN-Kh-rEL" id="fIV-xB-Llg"/>
-                <outlet property="locktimeHeaderOutlet" destination="ZE2-qT-Nhp" id="W0m-Kl-5Bl"/>
                 <outlet property="locktimeOutlet" destination="PRN-hB-Rgf" id="M0L-MZ-XDF"/>
                 <outlet property="mixdepthOutlet" destination="kJf-UO-TMk" id="CXi-cT-rU4"/>
                 <outlet property="roundeBackgroundView" destination="pXx-EG-WdU" id="cqz-ve-Gga"/>
@@ -181,6 +174,9 @@
         </systemColor>
         <systemColor name="systemGreenColor">
             <color red="0.20392156862745098" green="0.7803921568627451" blue="0.34901960784313724" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </systemColor>
+        <systemColor name="systemRedColor">
+            <color red="1" green="0.23137254901960785" blue="0.18823529411764706" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>
         <systemColor name="systemTealColor">
             <color red="0.18823529411764706" green="0.69019607843137254" blue="0.7803921568627451" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

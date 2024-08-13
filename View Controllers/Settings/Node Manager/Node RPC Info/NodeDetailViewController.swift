@@ -120,10 +120,8 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             newNode["isActive"] = true
             
             func save() {
-                print("save")
                 
                 func saveNow() {
-                    print("saveNow")
                     CoreDataService.saveEntity(dict: self.newNode, entityName: .newNodes) { [weak self] success in
                         guard let self = self else { return }
                         
