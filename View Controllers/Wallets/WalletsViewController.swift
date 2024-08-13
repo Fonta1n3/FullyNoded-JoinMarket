@@ -25,30 +25,44 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
     }
     
     func load() {
+        spinner.addConnectingView(vc: self, description: "")
         wallets.removeAll()
         activeWallet = ""
         
-        CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] jmWallets in
+        JMUtils.wallets { [weak self] (response, message) in
             guard let self = self else { return }
             
-            guard let jmWallets = jmWallets else { return }
+            spinner.removeConnectingView()
             
-            for jmWallet in jmWallets {
-                let w = JMWallet(jmWallet)
-                wallets.append(w)
+            guard let response = response, response.count > 0 else {
+                showAlert(vc: self, title: "", message: "No wallets yet.")
+                return
             }
             
-            JMUtils.session { (response, message) in
-                guard let session = response else { return }
+            CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] jmWallets in
+                guard let self = self else { return }
                 
-                if let activeWallet = session.wallet_name {
-                    self.activeWallet = activeWallet
+                guard let jmWallets = jmWallets else { return }
+                
+                for jmWallet in jmWallets {
+                    let w = JMWallet(jmWallet)
+                    if response.contains(w.name) {
+                        wallets.append(w)
+                    }
                 }
                 
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
+                JMUtils.session { (response, message) in
+                    guard let session = response else { return }
                     
-                    walletsTable.reloadData()
+                    if let activeWallet = session.wallet_name {
+                        self.activeWallet = activeWallet
+                    }
+                    
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        
+                        walletsTable.reloadData()
+                    }
                 }
             }
         }
@@ -58,6 +72,24 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
         let selectedWallet = wallets[indexPath.row]
         if selectedWallet.name == activeWallet {
             promptToLock(wallet: selectedWallet)
+        } else {
+            for (i, wallet) in wallets.enumerated() {
+                if wallet.active && wallet.id != selectedWallet.id {
+                    CoreDataService.update(id: wallet.id, keyToUpdate: "active", newValue: false, entity: .jmWallets) { deactivated in
+                    }
+                }
+                if wallet.id == selectedWallet.id {
+                    CoreDataService.update(id: wallet.id, keyToUpdate: "active", newValue: true, entity: .jmWallets) { [weak self] activated in
+                        guard let self = self else { return }
+                        if activated {
+                            load()
+                            showAlert(vc: self, title: "", message: wallet.name + " activated ✓")
+                        } else {
+                            showAlert(vc: self, title: "", message: "There was an issue activating your wallet.")
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -95,14 +127,27 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "walletCell", for: indexPath)
+        let wallet = wallets[indexPath.row]
         let label = cell.viewWithTag(1) as! UILabel
         let tapToLock = cell.viewWithTag(2) as! UILabel
-        label.text = wallets[indexPath.row].name
-        if wallets[indexPath.row].name == activeWallet {
+        label.text = wallet.name
+        
+        if wallet.name == activeWallet {
             tapToLock.alpha = 1
         } else {
             tapToLock.alpha = 0
         }
+        
+        cell.isSelected = wallet.active
+        
+        if wallet.active {
+            cell.accessoryType = .checkmark
+        } else {
+            cell.accessoryType = .none
+        }
+            
+        
+        
         return cell
         
     }
