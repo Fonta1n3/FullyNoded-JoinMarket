@@ -269,8 +269,8 @@ class TorClient: NSObject, URLSessionDelegate {
                 for (i, nodeDict) in nodes.enumerated() {
                     let nodeStruct = NodeStruct(dictionary: nodeDict)
                     
-                    if nodeStruct.isActive && nodeStruct.onionAddress != nil {
-                        let onionAddress = decryptedValue(nodeStruct.onionAddress!)
+                    if nodeStruct.isActive {
+                        let onionAddress = decryptedValue(nodeStruct.onionAddress)
                         let onionAddressArray = onionAddress.components(separatedBy: ".onion:")
                         // Ensure we are actually V3 before adding auth
                         guard onionAddressArray[0].count > 55 else { completion(); return }

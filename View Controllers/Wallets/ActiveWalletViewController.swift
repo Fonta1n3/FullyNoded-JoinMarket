@@ -82,6 +82,9 @@ class ActiveWalletViewController: UIViewController {
     @IBOutlet weak private var walletTable: UITableView!
     @IBOutlet weak private var invoiceView: UIView!
     @IBOutlet weak private var fxRateLabel: UILabel!
+    @IBOutlet weak private var blurView: UIVisualEffectView!
+    @IBOutlet weak private var torProgressLabel: UILabel!
+    @IBOutlet weak private var progressView: UIProgressView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -99,6 +102,13 @@ class ActiveWalletViewController: UIViewController {
         fidelityBondOutlet.alpha = 0
         jmStatusLabel.alpha = 0
         jmActionOutlet.alpha = 0
+        blurView.clipsToBounds = true
+        blurView.layer.cornerRadius = 8
+        blurView.layer.zPosition = 1
+        blurView.alpha = 0
+        torProgressLabel.layer.zPosition = 1
+        progressView.layer.zPosition = 1
+        progressView.setNeedsFocusUpdate()
         addNavBarSpinner()
     }
     
@@ -106,7 +116,11 @@ class ActiveWalletViewController: UIViewController {
         fiatCurrency = UserDefaults.standard.object(forKey: "currency") as? String ?? "USD"
         if initialLoad {
             initialLoad = false
-            getFxRate()
+            if TorClient.sharedInstance.state != .connected && TorClient.sharedInstance.state != .started {
+                TorClient.sharedInstance.start(delegate: self)
+            } else {
+                getFxRate()
+            }
         }
     }
     
@@ -634,11 +648,11 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func selectTimelockDate() {
-        datePickerView = blurView()
+        datePickerView = fbBlurView()
         view.addSubview(datePickerView)
     }
     
-    private func blurView() -> UIVisualEffectView {
+    private func fbBlurView() -> UIVisualEffectView {
         let effect = UIBlurEffect(style: .dark)
         let blurView = UIVisualEffectView(frame: view.frame)
         blurView.effect = effect
@@ -1007,6 +1021,7 @@ class ActiveWalletViewController: UIViewController {
     
     
     private func getFxRate() {
+        print("getFxRate")
         FiatConverter.sharedInstance.getFxRate { [weak self] rate in
             guard let self = self else { return }
             
@@ -1691,4 +1706,43 @@ extension ActiveWalletViewController: UIPickerViewDelegate, UIPickerViewDataSour
             break
         }
     }
+}
+
+extension ActiveWalletViewController: OnionManagerDelegate {
+    func torConnProgress(_ progress: Int) {
+        if progress < 100 {
+            // show the tor connection progress
+            print("progress: \(progress)")
+        }
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.torProgressLabel.text = "Tor bootstrapping \(progress)% complete"
+            self?.progressView.setProgress(Float(Double(progress) / 100.0), animated: true)
+            self?.blurView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+            self?.blurView.alpha = 1
+        }
+    }
+    
+    func torConnFinished() {
+        // hide it and get fxRate
+        DispatchQueue.main.async { [weak self] in
+            self?.torProgressLabel.isHidden = true
+            self?.progressView.isHidden = true
+            self?.blurView.isHidden = true
+        }
+        
+        getFxRate()
+    }
+    
+    func torConnDifficulties() {
+        DispatchQueue.main.async { [weak self] in
+            self?.torProgressLabel.isHidden = true
+            self?.progressView.isHidden = true
+            self?.blurView.isHidden = true
+        }
+        
+        // hide it with alert
+    }
+    
+    
 }

@@ -52,16 +52,13 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             
             for node in nodes {
                 let nodeStr = NodeStruct(dictionary: node)
-                if nodeStr.id != nil {
-                    self.nodeArray.append(node)
-                }
+                self.nodeArray.append(node)
             }
             
             self.reloadNodeTable()
             
             if self.nodeArray.count == 0 {
                 self.addNodePrompt()
-                //showAlert(vc: self, title: "", message: "No nodes added yet, tap the + sign to add one.")
             }
         }
     }
@@ -107,13 +104,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         background.layer.cornerRadius = 8
         
         let nodeStruct = NodeStruct(dictionary: nodeArray[indexPath.section])
-        
-        if !nodeStruct.uncleJim {
-            label.text = nodeStruct.label
-        } else {
-            label.text = "***shared node***"
-        }
-        
+        label.text = nodeStruct.label
         isActive.isOn = nodeArray[indexPath.section]["isActive"] as? Bool ?? false
         isActive.restorationIdentifier = "\(indexPath.section)"
         isActive.addTarget(self, action: #selector(setActiveNow(_:)), for: .touchUpInside)
@@ -126,16 +117,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         icon.tintColor = .white
         
-        if nodeStruct.isJoinMarket {
-            icon.image = UIImage(systemName: "arrow.triangle.2.circlepath")
-            background.backgroundColor = .black
-        } else if nodeStruct.isLightning {
-            icon.image = UIImage(systemName: "bolt")
-            background.backgroundColor = .systemOrange
-        } else {
-            icon.image = UIImage(systemName: "link")
-            background.backgroundColor = .systemBlue
-        }
+        icon.image = UIImage(systemName: "link")
+        background.backgroundColor = .systemBlue
         
         return cell
     }
@@ -180,11 +163,14 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     private func deleteNode(nodeId: UUID, indexPath: IndexPath) {
-        CoreDataService.deleteEntity(id: nodeId, entityName: .newNodes) { [unowned vc = self] success in
+        CoreDataService.deleteEntity(id: nodeId, entityName: .newNodes) { [weak self] success in
+            guard let self = self else { return }
             if success {
-                DispatchQueue.main.async { [unowned vc = self] in
-                    vc.nodeArray.remove(at: indexPath.section)
-                    vc.nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    nodeArray.remove(at: indexPath.section)
+                    nodeTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
                 }
             } else {
                 showAlert(vc: self, title: "", message: "We had an error trying to delete that node")
@@ -195,9 +181,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == UITableViewCell.EditingStyle.delete {
             let node = NodeStruct(dictionary: nodeArray[indexPath.section])
-            if node.id != nil {
-                deleteNode(nodeId: node.id!, indexPath: indexPath)
-            }
+            deleteNode(nodeId: node.id, indexPath: indexPath)
         }
     }
     
@@ -216,12 +200,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         if index < nodeArray.count {
             
-            CoreDataService.update(id: nodeStr.id!, keyToUpdate: "isActive", newValue: selectedSwitch.isOn, entity: .newNodes) { [unowned vc = self] success in
+            CoreDataService.update(id: nodeStr.id, keyToUpdate: "isActive", newValue: selectedSwitch.isOn, entity: .newNodes) { [unowned vc = self] success in
                 if success {
-                    if !nodeStr.isLightning && !nodeStr.isJoinMarket {
-                        vc.ud.removeObject(forKey: "walletName")
-                    }
-                    
                     if vc.nodeArray.count == 1 {
                         vc.reloadTable()
                     }
@@ -237,13 +217,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                         let str = NodeStruct(dictionary: node)
                         
                         if str.id != nodeStr.id {
-                            if !nodeStr.isLightning && !str.isLightning && !nodeStr.isJoinMarket && !str.isJoinMarket {
-                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { _ in }
-                            }
-                            
-                            if nodeStr.isLightning && str.isLightning || nodeStr.isJoinMarket && str.isJoinMarket {
-                                CoreDataService.update(id: str.id!, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { _ in }
-                            }
+                            CoreDataService.update(id: str.id, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { _ in }
                         }
                     }
                     
@@ -254,29 +228,15 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                                     vc.nodeArray.removeAll()
                                     for node in nodes! {
                                         let str = NodeStruct(dictionary: node)
-                                        if str.id != nil {
-                                            vc.nodeArray.append(node)
-                                        }
+                                        vc.nodeArray.append(node)
                                     }
                                     vc.nodeTable.reloadData()
-                                    
-                                    if !nodeStr.isLightning && !nodeStr.isJoinMarket {
-                                        if selectedSwitch.isOn {
-                                            NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
-                                        }
-                                    }
-                                    
-//                                    if !nodeStr.isJoinMarket {
-//                                        NotificationCenter.default.post(name: .refreshWallet, object: nil, userInfo: nil)
-//                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        } else {
-            print("node count is wrong")
         }
     }
     
@@ -287,9 +247,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
                     vc.nodeArray.removeAll()
                     for node in nodes! {
                         let ns = NodeStruct(dictionary: node)
-                        if ns.id != nil {
-                            vc.nodeArray.append(node)
-                        }
+                        vc.nodeArray.append(node)
                     }
                     vc.nodeTable.reloadData()
                 }

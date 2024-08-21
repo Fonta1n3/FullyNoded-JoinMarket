@@ -34,6 +34,7 @@ class SeedDisplayerViewController: UIViewController, UINavigationControllerDeleg
             guard let self = self else { return }
             NotificationCenter.default.post(name: .refreshWallet, object: nil)
             navigationController?.popToRootViewController(animated: true)
+            tabBarController?.selectedIndex = 0
         }
     }
     

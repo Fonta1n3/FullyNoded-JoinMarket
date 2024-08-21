@@ -85,6 +85,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     }
     
     @IBAction func save(_ sender: Any) {
+        spinner.addConnectingView(vc: self, description: "checking node connectivity...")
         
         func encryptedValue(_ decryptedValue: Data) -> Data? {
             return Crypto.encrypt(decryptedValue)
@@ -94,11 +95,13 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             newNode["id"] = UUID()
             
             guard let onionAddressText = onionAddressField.text else {
+                spinner.removeConnectingView()
                 showAlert(vc: self, title: "", message: "Add a node address first. If JM is running locally use localhost:28183.")
                 return
             }
             
-            guard let encryptedOnionAddress = encryptedValue(onionAddressText.utf8)  else {
+            guard let encryptedOnionAddress = encryptedValue(onionAddressText.utf8) else {
+                spinner.removeConnectingView()
                 showAlert(vc: self, title: "", message: "Error encrypting the address.")
                 return
             }
@@ -107,11 +110,13 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             newNode["label"] = nodeLabel.text ?? "Join Market"
             
             guard let certText = certField.text?.condenseWhitespace(), certText != "" else {
+                spinner.removeConnectingView()
                 showAlert(vc: self, title: "", message: "Paste in the SSL cert text first.")
                 return
             }
             
             guard let encryptedCert = encryptCert(certText) else {
+                spinner.removeConnectingView()
                 showAlert(vc: self, title: "", message: "Unable to encrypt your cert.")
                 return
             }
@@ -129,17 +134,18 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                              JMUtils.wallets { [weak self] (response, message) in
                                  guard let self = self else { return }
                                  
-                                 guard let response = response else {
+                                 spinner.removeConnectingView()
+                                 
+                                 guard let _ = response else {
                                      showAlert(vc: self, title: "There was an issue testing your connection..", message: message ?? "Unknown issue.")
+                                     
+                                     let n = NodeStruct(dictionary: newNode)
+                                     CoreDataService.deleteEntity(id: n.id, entityName: .newNodes) { _ in }
                                      
                                      return
                                  }
                                  
-                                 if response.count == 0 {
-                                     promptToCreateWallet()
-                                 } else {
-                                     showAlert(vc: self, title: "Connected to Join Market ✓", message: "You have exisiting wallets, would you like to connect to one?")
-                                 }
+                                 promptToCreateWallet()
                              }
                          } else {
                              showAlert(vc: self, title: "Node not added...", message: "There was an issue adding your node, please let us know about it.")
@@ -155,7 +161,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                     
                     for (i, node) in nodes.enumerated() {
                         let node = NodeStruct(dictionary: node)
-                        CoreDataService.update(id: node.id!, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { updated in
+                        CoreDataService.update(id: node.id, keyToUpdate: "isActive", newValue: false, entity: .newNodes) { updated in
                             if updated, i + 1 == nodes.count {
                                 saveNow()
                             }
@@ -216,105 +222,15 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             
             let tit = "Join Market connected ✓"
             
-            let mess = "In order to use the app you need to create a Join Market wallet."
+            let mess = "In order to use the app you need to create or import a Join Market wallet."
             
             let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Create a wallet", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                getLabelAndPasswordForWallet()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func getLabelAndPasswordForWallet() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let alert = UIAlertController(title: "To create a wallet provide a label and a password.", message: "The label will be used as a filename for the wallet.\n\nThe password will be used to encrypt and decrypt the wallet.\n\nYou MUST remember the password to use the wallet! Fully Noded does not save it!", preferredStyle: .alert)
-
-            alert.addTextField { textFieldLabel in
-                textFieldLabel.placeholder = "Label / filename."
-            }
-            
-            alert.addTextField { passwordField1 in
-                passwordField1.placeholder = "A password you won't forget."
-                passwordField1.isSecureTextEntry = true
-            }
-            
-            alert.addTextField { passwordField2 in
-                passwordField2.placeholder = "Confirm password."
-                passwordField2.isSecureTextEntry = true
-            }
-
-            alert.addAction(UIAlertAction(title: "Create Wallet", style: .default, handler: { [weak self] _ in
-                guard let self = self else { return }
-                
-                let fileName = alert.textFields![0].text // Force unwrapping because we know it exists.
-                let password1 = alert.textFields![1].text
-                let password2 = alert.textFields![2].text
-                
-                if let fileName = fileName, 
-                    fileName != "" {
-                    if let password1 = password1,
-                        let password2 = password2,
-                        password1 == password2 {
-                        self.createWallet(label: fileName, password: password1)
-                    } else {
-                        showAlert(vc: self, title: "Passwords don't match...", message: "Navigate to the Active Wallet view to try again.")
-                    }
-                } else {
-                    showAlert(vc: self, title: "Empty label", message: "Please add a label / filename in order to create a wallet. Navigate to the Active Wallet view to try again.")
+            alert.addAction(UIAlertAction(title: "Create a wallet", style: .default, handler: { action in
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    performSegue(withIdentifier: "segueToCreateWallet", sender: self)
                 }
-            }))
-
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func createWallet(label: String, password: String) {
-        spinner.addConnectingView(vc: self, description: "Creating your wallet...")
-        JMUtils.createWallet(label: label, password: password) { [weak self] (response, words, message) in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            guard let jmWallet = response, let words = words else {
-                showAlert(vc: self, title: "There was an issue creating your JM wallet.", message: message ?? "Unknown.")
-                
-                return
-            }
-            
-            self.password = password
-            self.words = words
-            self.jmWallet = jmWallet
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                self.performSegue(withIdentifier: "segueToBackUpInfo", sender: self)
-            }
-        }
-    }
-    
-    private func promptToImportWallet() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            let tit = "Join Market connected ✓"
-            
-            let mess = "You have existing Join Market wallets, connect to one?"
-            
-            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Connect a wallet", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                
-                
             }))
             
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
@@ -338,24 +254,20 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         
         if selectedNode != nil {
             let node = NodeStruct(dictionary: selectedNode!)
-            if node.id != nil {
                 if node.label != "" {
                     nodeLabel.text = node.label
                 }
                                                 
-                if let enc = node.onionAddress {
-                    let decrypted = decryptedValue(enc)
+            let decrypted = decryptedValue(node.onionAddress)
                     if onionAddressField != nil {
                         onionAddressField.text = decrypted
                     }
-                }
                 
-                if node.cert != nil, certField != nil {
-                    if let decryptedCert = Crypto.decrypt(node.cert!) {
+                if certField != nil {
+                    if let decryptedCert = Crypto.decrypt(node.cert) {
                         certField.text = decryptedCert.utf8String ?? ""
                     }
                 }
-            }
         }
         
         DispatchQueue.main.async { [weak self] in

@@ -53,20 +53,16 @@ class JMRPC {
                 return
             }
             
-            var onionAddress:String?
+            var onionAddress: String?
             
-            if let encAddress = node.onionAddress {
-                onionAddress = decryptedValue(encAddress)
+            onionAddress = decryptedValue(node.onionAddress)
+            
+            guard let decryptedCert = Crypto.decrypt(node.cert) else {
+                completion((nil, "Error getting decrypting cert."))
+                return
             }
-            
-            if let encryptedCert = node.cert {
-                guard let decryptedCert = Crypto.decrypt(encryptedCert) else {
-                    completion((nil, "Error getting decrypting cert."))
-                    return
-                }
                 
-                self.torClient.cert = decryptedCert.base64EncodedData()
-            }
+            self.torClient.cert = decryptedCert.base64EncodedData()
             
             let walletUrl = "https://\(onionAddress ?? "localhost:28183")/\(method.stringValue)"
             

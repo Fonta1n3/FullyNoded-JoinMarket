@@ -149,8 +149,8 @@
                         <rect key="frame" x="0.0" y="0.0" width="375" height="554"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <visualEffectView opaque="NO" contentMode="scaleToFill" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="C5t-Vg-Ik3">
-                                <rect key="frame" x="16" y="255" width="343" height="44"/>
+                            <visualEffectView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="C5t-Vg-Ik3">
+                                <rect key="frame" x="16" y="68" width="343" height="44"/>
                                 <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="23Z-c1-XHN">
                                     <rect key="frame" x="0.0" y="0.0" width="343" height="44"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -421,6 +421,7 @@
                         <viewLayoutGuide key="safeArea" id="Bmh-eo-0G2"/>
                         <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
+                            <constraint firstItem="C5t-Vg-Ik3" firstAttribute="top" secondItem="kDg-8F-wzb" secondAttribute="bottom" constant="8" id="0qy-dL-UT8"/>
                             <constraint firstItem="xuS-Az-tfm" firstAttribute="leading" secondItem="Bmh-eo-0G2" secondAttribute="leading" id="4uv-HU-vlj"/>
                             <constraint firstItem="5Jb-DV-gMz" firstAttribute="leading" secondItem="Bmh-eo-0G2" secondAttribute="leading" constant="16" id="52p-Mr-eKJ"/>
                             <constraint firstItem="Bmh-eo-0G2" firstAttribute="trailing" secondItem="yUJ-iQ-fjZ" secondAttribute="trailing" constant="16" id="6bx-f6-Ldx"/>
@@ -437,12 +438,14 @@
                             <constraint firstItem="yUJ-iQ-fjZ" firstAttribute="top" secondItem="Bmh-eo-0G2" secondAttribute="top" id="YXf-oY-lqg"/>
                             <constraint firstItem="xuS-Az-tfm" firstAttribute="top" secondItem="5Jb-DV-gMz" secondAttribute="bottom" constant="8" id="awf-Cx-XAm"/>
                             <constraint firstItem="iNV-mE-jkV" firstAttribute="centerY" secondItem="5Jb-DV-gMz" secondAttribute="centerY" id="cBs-6q-k2U"/>
+                            <constraint firstItem="Bmh-eo-0G2" firstAttribute="trailing" secondItem="C5t-Vg-Ik3" secondAttribute="trailing" constant="16" id="dD6-7L-mrR"/>
                             <constraint firstItem="Bmh-eo-0G2" firstAttribute="trailing" secondItem="SdT-Ui-L9v" secondAttribute="trailing" constant="8" id="hdF-xG-rXD"/>
                             <constraint firstItem="kDg-8F-wzb" firstAttribute="top" secondItem="Bmh-eo-0G2" secondAttribute="top" constant="20" id="jJu-XC-BDe"/>
                             <constraint firstItem="1ol-6t-ydT" firstAttribute="leading" secondItem="iNV-mE-jkV" secondAttribute="trailing" constant="8" symbolic="YES" id="o8G-wm-ZD1"/>
                             <constraint firstAttribute="bottom" secondItem="SdT-Ui-L9v" secondAttribute="bottom" constant="8" id="p0Y-S3-k4N"/>
                             <constraint firstItem="Bmh-eo-0G2" firstAttribute="trailing" secondItem="xuS-Az-tfm" secondAttribute="trailing" id="rgc-th-7NN"/>
                             <constraint firstItem="VKJ-ZM-CNw" firstAttribute="leading" secondItem="kDg-8F-wzb" secondAttribute="trailing" constant="8" symbolic="YES" id="si4-Db-JjX"/>
+                            <constraint firstItem="C5t-Vg-Ik3" firstAttribute="leading" secondItem="Bmh-eo-0G2" secondAttribute="leading" constant="16" id="umg-MP-v7f"/>
                             <constraint firstItem="1ol-6t-ydT" firstAttribute="centerY" secondItem="iNV-mE-jkV" secondAttribute="centerY" id="xHd-fh-qhj"/>
                         </constraints>
                     </view>
@@ -465,6 +468,7 @@
                     </navigationItem>
                     <connections>
                         <outlet property="backgroundView" destination="SdT-Ui-L9v" id="Wm8-fO-xZp"/>
+                        <outlet property="blurView" destination="C5t-Vg-Ik3" id="t9M-7X-pZC"/>
                         <outlet property="coinjoinButtonOutlet" destination="1rD-5C-VVj" id="7Qa-3w-vdO"/>
                         <outlet property="earnOutlet" destination="AiN-8c-NzZ" id="GKd-qD-D8f"/>
                         <outlet property="fidelityBondOutlet" destination="AiN-8c-NzZ" id="zeT-b0-nOQ"/>
@@ -475,7 +479,9 @@
                         <outlet property="jmStatusImage" destination="5Jb-DV-gMz" id="JL5-Ys-aHP"/>
                         <outlet property="jmStatusLabel" destination="iNV-mE-jkV" id="eXW-8M-xNN"/>
                         <outlet property="jmVersionLabel" destination="VKJ-ZM-CNw" id="2Xm-tr-Ema"/>
+                        <outlet property="progressView" destination="wCS-gO-C3d" id="peq-U2-YBC"/>
                         <outlet property="sendView" destination="nrO-Le-9E9" id="lK3-zs-chF"/>
+                        <outlet property="torProgressLabel" destination="2nt-hF-coL" id="4eU-IY-tfM"/>
                         <outlet property="walletTable" destination="xuS-Az-tfm" id="qnM-Ea-25y"/>
                         <segue destination="pUo-bf-sNm" kind="show" identifier="spendFromWallet" id="w2g-bl-j8v"/>
                         <segue destination="Xxg-Pp-vvN" kind="show" identifier="segueToInvoice" id="kq8-dj-bJ2"/>
@@ -2363,7 +2369,7 @@
                         <outlet property="saveButton" destination="p2J-sn-A5I" id="ZWz-y2-s1b"/>
                         <outlet property="scanQROutlet" destination="awp-qu-L3a" id="pQ4-ao-MZ5"/>
                         <segue destination="HJc-Yu-EXJ" kind="presentation" identifier="segueToScanNodeCreds" id="07E-4w-Zh7"/>
-                        <segue destination="Yhd-sD-SB5" kind="show" identifier="segueToBackUpInfo" id="wcQ-I9-5uJ"/>
+                        <segue destination="0gR-Gj-FSR" kind="show" identifier="segueToCreateWallet" id="A3B-Fi-9Nq"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="YxC-Y3-iSs" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -2421,8 +2427,10 @@
                                 <constraints>
                                     <constraint firstAttribute="height" constant="42" id="vCb-Or-Kaz"/>
                                 </constraints>
-                                <state key="normal" title="add signer"/>
-                                <buttonConfiguration key="configuration" style="filled" title="Recover"/>
+                                <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
+                                <state key="normal" title="Recover">
+                                    <color key="titleColor" systemColor="systemTealColor"/>
+                                </state>
                                 <connections>
                                     <action selector="addSignerAction:" destination="KdL-a2-qdZ" eventType="touchUpInside" id="Ek0-Kq-bqv"/>
                                 </connections>
@@ -2561,10 +2569,10 @@
     </scenes>
     <inferredMetricsTieBreakers>
         <segue reference="qed-hl-jG5"/>
-        <segue reference="Fvb-gy-rb3"/>
+        <segue reference="lCn-Tj-DFs"/>
         <segue reference="rUh-M4-517"/>
-        <segue reference="AJq-aA-dsj"/>
-        <segue reference="1fQ-PG-chF"/>
+        <segue reference="e0d-Zp-a29"/>
+        <segue reference="07E-4w-Zh7"/>
     </inferredMetricsTieBreakers>
     <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
     <resources>
