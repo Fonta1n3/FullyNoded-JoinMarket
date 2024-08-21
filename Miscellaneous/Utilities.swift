@@ -108,3 +108,16 @@ public func getDocumentsDirectory() -> URL {
     let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
     return paths[0]
 }
+
+public func shakeAlert(viewToShake: UIView) {
+    let animation = CABasicAnimation(keyPath: "position")
+    animation.duration = 0.07
+    animation.repeatCount = 4
+    animation.autoreverses = true
+    animation.fromValue = NSValue(cgPoint: CGPoint(x: viewToShake.center.x - 10, y: viewToShake.center.y))
+    animation.toValue = NSValue(cgPoint: CGPoint(x: viewToShake.center.x + 10, y: viewToShake.center.y))
+    
+    DispatchQueue.main.async {
+        viewToShake.layer.add(animation, forKey: "position")
+    }
+}

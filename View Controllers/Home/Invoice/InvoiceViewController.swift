@@ -98,9 +98,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     }
     
     
-    
-    
-    
     @IBAction func shareAddressAction(_ sender: Any) {
         shareText(addressString)
     }

@@ -1088,9 +1088,12 @@ class ActiveWalletViewController: UIViewController {
                 return
             }
             
-            DispatchQueue.main.async { [weak self] in
-                self?.fidelityBondOutlet.alpha = 1
+            if utxos.count > 0 {
+                DispatchQueue.main.async { [weak self] in
+                    self?.fidelityBondOutlet.alpha = 1
+                }
             }
+            
             
             var totalBalance = 0.0
             
@@ -1113,7 +1116,7 @@ class ActiveWalletViewController: UIViewController {
                     }
                 }
                 
-                if let locktime = utxo.locktime {
+                if let _ = utxo.locktime {
                     DispatchQueue.main.async { [weak self] in
                         self?.fidelityBondOutlet.alpha = 0
                     }

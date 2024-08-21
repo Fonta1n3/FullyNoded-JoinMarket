@@ -23,76 +23,8 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
         navigationController?.delegate = self
     }
     
-    
-//    private func segueToSingleSigCreator() {
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//            
-//            self.performSegue(withIdentifier: "segueToSeedWords", sender: self)
-//        }
-//    }
-    
-//    @IBAction func manualAction(_ sender: Any) {
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//            
-//            self.performSegue(withIdentifier: "seguToManualCreation", sender: self)
-//        }
-//    }
-
-    
     @IBAction func createJmWalletAction(_ sender: Any) {
         promptToCreateWallet()
-        //spinner.addConnectingView(vc: self, description: "checking for existing jm wallets on your server...")
-//        JMUtils.wallets { [weak self] (jmWallets, message) in
-//            guard let self = self else { return }
-//            guard let jmWallets = jmWallets else {
-//                self.spinner.removeConnectingView()
-//                showAlert(vc: self, title: "JM Server issue", message: message ?? "unknown")
-//                return
-//            }
-//            
-//            if jmWallets.count > 0 {
-//                // select a wallet to use
-//                self.promptToChooseJmWallet(jmWallets: jmWallets)
-//            } else {
-//                DispatchQueue.main.async {
-//                    self.spinner.label.text = "creating new wallet (can take some time)..."
-//                }
-//                
-//                JMUtils.createWallet { (wallet, words, passphrase, message) in
-//                    self.spinner.removeConnectingView()
-//                    
-//                    guard let jmWallet = wallet, let words = words, let passphrase = passphrase else {
-//                        if let mess = message, mess.contains("Wallet already unlocked.") {
-//                            self.promptToLockWallets()
-//                        } else {
-//                            showAlert(vc: self, title: "There was an issue creating your JM wallet.", message: message ?? "Unknown.")
-//                        }
-//                        
-//                        return
-//                    }
-//                    UserDefaults.standard.setValue(jmWallet.name, forKey: "walletName")
-//                    var formattedWords = ""
-//                    for (i, word) in words.description.split(separator: " ").enumerated() {
-//                        formattedWords += "\(i + 1). \(word) "
-//                    }
-//                    self.jmMessage = """
-//                    In order to avoid lost funds back up the following information:
-//                    
-//                    Join Market Seed Words:
-//                    \(formattedWords)
-//                    
-//                    Join Market wallet encryption passphrase:
-//                    \(passphrase)
-//                    
-//                    Join Market wallet file:
-//                    \(jmWallet.jmWalletName)
-//                    """
-//                    self.segueToSingleSigCreator()
-//                }
-//            }
-//        }
     }
     
     private func promptToCreateWallet() {
@@ -226,11 +158,12 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             
             if remoteJmWallets.count > 0 {
                 CoreDataService.retrieveEntity(entityName: .jmWallets) { localJmWallets in
+                    
                     guard let localJmWallets = localJmWallets, localJmWallets.count > 0 else {
                         self.promptToChooseJmWallet(jmWallets: remoteJmWallets)
                         return
                     }
-                    
+                                        
                     var newWallets: [String] = []
                     
                     for remoteJmWallet in remoteJmWallets {
@@ -242,7 +175,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                                 exists = true
                             }
                             
-                            if i + 1 == localJmWallet.count {
+                            if i + 1 == localJmWallets.count {
                                 if !exists {
                                     newWallets.append(remoteJmWallet)
                                 }
@@ -263,7 +196,11 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
     }
     
     @IBAction func recoverAction(_ sender: Any) {
-        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            performSegue(withIdentifier: "segueToRecover", sender: self)
+        }
     }
     
     private func promptToChooseJmWallet(jmWallets: [String]) {
@@ -352,7 +289,10 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                                 return
                             }
                             
-                            print("wallet saved, go to active wallet view")
+                            DispatchQueue.main.async {
+                                NotificationCenter.default.post(name: .refreshWallet, object: nil)
+                                self.navigationController?.popToRootViewController(animated: true)
+                            }
                         }
                     }
                     
@@ -385,65 +325,10 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                 jmWalletPassphrase.keyboardAppearance = .dark
             }
             
-            alert.addTextField { jmWalletPassphraseConfirm in
-                jmWalletPassphraseConfirm.placeholder = "confirm password"
-                jmWalletPassphraseConfirm.keyboardAppearance = .dark
-                jmWalletPassphraseConfirm.isSecureTextEntry = true
-            }
-            
             alert.addAction(recover)
             let cancel = UIAlertAction(title: "Cancel", style: .default) { (alertAction) in }
             alert.addAction(cancel)
             self.present(alert, animated:true, completion: nil)
-        }
-    }
-    
-    private func promptToLockWallets() {
-        CoreDataService.retrieveEntity(entityName: .jmWallets) { wallets in
-            guard let wallets = wallets else { return }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                
-                let tit = "You have an existing Join Market wallet which is unlocked, you need to lock it before we can create a new one."
-                
-                let mess = ""
-                
-                let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-                
-                JMUtils.wallets { (server_wallets, message) in
-                    guard let server_wallets = server_wallets else { return }
-                    for server_wallet in server_wallets {
-                        DispatchQueue.main.async {
-                            alert.addAction(UIAlertAction(title: server_wallet, style: .default, handler: { [weak self] action in
-                                guard let self = self else { return }
-                                
-                                self.spinner.addConnectingView(vc: self, description: "locking wallet...")
-                                
-                                for fnwallet in wallets {
-//                                    if fnwallet["id"] != nil {
-//                                        let str = Wallet(dictionary: fnwallet)
-//                                        if str.jmWalletName == server_wallet {
-//                                            JMUtils.lockWallet(wallet: str) { [weak self] (locked, message) in
-//                                                guard let self = self else { return }
-//                                                self.spinner.removeConnectingView()
-//                                                if locked {
-//                                                    showAlert(vc: self, title: "Wallet locked ✓", message: "Try joining the utxo again.")
-//                                                } else {
-//                                                    showAlert(vc: self, title: message ?? "Unknown issue locking that wallet...", message: "FN can only work with one JM wallet at a time, it looks like you need to restart your JM daemon in order to create a new wallet. Restart JM daemon and try again.")
-//                                                }
-//                                            }
-//                                        }
-//                                    }
-                                }
-                            }))
-                        }
-                    }
-                }
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
-            }
         }
     }
     
@@ -464,10 +349,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
         switch segue.identifier {
         case "segueToSeedWords":
             guard let vc = segue.destination as? SeedDisplayerViewController else { fallthrough }
-            
-//            vc.isSegwit = isSegwit
-//            vc.isTaproot = isTaproot
-//            vc.jmMessage = jmMessage
+
             vc.password = password
             vc.words = words
             vc.jmWallet = jmWallet

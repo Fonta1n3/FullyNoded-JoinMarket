@@ -11,6 +11,7 @@ import UIKit
 class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {    
     
     @IBOutlet var walletsTable: UITableView!
+    private var editButton = UIBarButtonItem()
     private var wallets: [JMWallet] = []
     private var activeWallet = ""
     private let spinner = ConnectingView()
@@ -21,6 +22,9 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
         // Do any additional setup after loading the view.
         walletsTable.delegate = self
         walletsTable.dataSource = self
+        editButton = UIBarButtonItem(barButtonSystemItem: .edit, target: self, action: #selector(editWallets))
+        editButton.tintColor = .systemTeal
+        self.navigationItem.setRightBarButtonItems([editButton], animated: true)
         load()
     }
     
@@ -75,15 +79,16 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
         } else {
             for (i, wallet) in wallets.enumerated() {
                 if wallet.active && wallet.id != selectedWallet.id {
-                    CoreDataService.update(id: wallet.id, keyToUpdate: "active", newValue: false, entity: .jmWallets) { deactivated in
-                    }
+                    CoreDataService.update(id: wallet.id, keyToUpdate: "active", newValue: false, entity: .jmWallets) { _ in }
                 }
                 if wallet.id == selectedWallet.id {
                     CoreDataService.update(id: wallet.id, keyToUpdate: "active", newValue: true, entity: .jmWallets) { [weak self] activated in
                         guard let self = self else { return }
                         if activated {
-                            load()
-                            showAlert(vc: self, title: "", message: wallet.name + " activated ✓")
+                            load()                            
+                            DispatchQueue.main.async {
+                                NotificationCenter.default.post(name: .refreshWallet, object: nil)
+                            }
                         } else {
                             showAlert(vc: self, title: "", message: "There was an issue activating your wallet.")
                         }
@@ -145,90 +150,48 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
         } else {
             cell.accessoryType = .none
         }
-            
-        
         
         return cell
         
     }
     
-//    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-//        if editingStyle == UITableViewCell.EditingStyle.delete {
-//            deleteWallet(id: wallets[indexPath.row].id, indexPath: indexPath)
-//        }
-//    }
+    @objc func editWallets() {
+        walletsTable.setEditing(!walletsTable.isEditing, animated: true)
+        
+        if walletsTable.isEditing {
+            editButton = UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(editWallets))
+        } else {
+            editButton = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(editWallets))
+        }
+        
+        editButton.tintColor = .systemTeal
+        
+        self.navigationItem.setRightBarButtonItems([editButton], animated: true)
+    }
     
-//    private func deleteWallet(id: UUID, indexPath: IndexPath) {
-//        CoreDataService.deleteEntity(id: id, entityName: .jmWallets) { [unowned vc = self] success in
-//            if success {
-//                DispatchQueue.main.async { [unowned vc = self] in
-//                    vc.wallets.remove(at: indexPath.section)
-//                    vc.walletsTable.deleteSections(IndexSet.init(arrayLiteral: indexPath.section), with: .fade)
-//                }
-//            } else {
-//                showAlert(vc: self, title: "", message: "We had an error trying to delete that wallet.")
-//            }
-//        }
-//    }
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == UITableViewCell.EditingStyle.delete {
+            deleteWallet(id: wallets[indexPath.row].id, indexPath: indexPath)
+        }
+    }
     
-//    @objc func setActiveNow(_ sender: UISwitch) {
-//        guard let restId = sender.restorationIdentifier, let index = Int(restId) else { return }
-//        
-//        guard let selectedCell = walletsTable.cellForRow(at: IndexPath.init(row: index, section: 0)) else {
-//            return
-//        }
-//        
-//        let toggle = selectedCell.viewWithTag(2) as! UISwitch
-//        
-//        CoreDataService.update(id: wallets[index].id, keyToUpdate: "active", newValue: toggle.isOn, entity: .jmWallets) { [weak self] success in
-//            guard let self = self else { return }
-//            
-//            guard success else { return }
-//            
-//            if wallets.count == 1 {
-//                reloadTable()
-//                
-//            } else {
-//                CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] jmWallets in
-//                    guard let self = self else { return }
-//                    
-//                    guard let jmWallets = jmWallets else { return }
-//                    
-//                    //wallets.removeAll()
-//                    
-//                    for (i, jmWallet) in jmWallets.enumerated() {
-//                        if i != index {
-//                            let w = JMWallet(jmWallet)
-//                            
-//                            if w.id != wallets[index].id {
-//                                CoreDataService.update(id: w.id, keyToUpdate: "active", newValue: false, entity: .jmWallets) { deactivated in
-//                                    guard deactivated else {
-//                                        showAlert(vc: self, title: "", message: "There was an issue deactivating that wallet...")
-//                                        return
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        
-//                        if i + 1 == jmWallets.count {
-//                            CoreDataService.retrieveEntity(entityName: .jmWallets) { wallets in
-//                                guard let wallets = wallets else { return }
-//                                
-//                                self.wallets.removeAll()
-//                                
-//                                for wallet in wallets {
-//                                    let jmw = JMWallet(wallet)
-//                                    self.wallets.append(jmw)
-//                                }
-//                            }
-//                        }
-//                        
-//                    }
-//                    reloadTable()
-//                }
-//            }
-//        }
-//    }
+    private func deleteWallet(id: UUID, indexPath: IndexPath) {
+        CoreDataService.deleteEntity(id: id, entityName: .jmWallets) { [weak self]
+            success in
+            guard let self = self else { return }
+            if success {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    
+                    wallets.remove(at: indexPath.row)
+                    walletsTable.deleteRows(at: [indexPath], with: .fade)
+                }
+            } else {
+                showAlert(vc: self, title: "", message: "We had an error trying to delete that wallet.")
+            }
+        }
+    }
+    
     
     private func reloadTable() {
         DispatchQueue.main.async { [ weak self] in

@@ -10,6 +10,7 @@
 let rootUrl = "api/v1"
 
 public enum JM_REST {
+    case recover
     case walletall
     case walletcreate
     case session
@@ -33,6 +34,8 @@ public enum JM_REST {
     
     var stringValue:String {
         switch self {
+        case .recover:
+            return "\(rootUrl)/wallet/recover"
         case .getinfo:
             return "\(rootUrl)/getinfo"
         case .token(let wallet):

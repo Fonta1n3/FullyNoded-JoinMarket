@@ -107,7 +107,7 @@ class JMRPC {
                 timeout = 1000
                 paramToUse = ["password": password]
                 
-            case .walletcreate:
+            case .walletcreate, .recover:
                 httpMethod = "POST"
                 timeout = 1000
                 
