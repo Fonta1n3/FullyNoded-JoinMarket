@@ -20,6 +20,7 @@ class UTXOCell: UITableViewCell {
     private var isLocked: Bool!
     private unowned var delegate: UTXOCellDelegate!
     
+    @IBOutlet private weak var frozenLabel: UILabel!
     @IBOutlet private weak var lockedImage: UIImageView!
     @IBOutlet private weak var confsImage: UIImageView!
     @IBOutlet private weak var locktimeOutlet: UILabel!
@@ -53,6 +54,12 @@ class UTXOCell: UITableViewCell {
             labelOutlet.text = utxo.label
         } else {
             labelOutlet.text = "No label"
+        }
+        
+        if utxo.frozen {
+            frozenLabel.text = "Frozen"
+        } else {
+            frozenLabel.text = "Not frozen"
         }
         
         if let locktime = utxo.locktime {

@@ -13,7 +13,7 @@ public struct Balances: CustomStringConvertible {
     let onchainBalance:String
     
     init(dictionary: [String: Any]) {
-        onchainBalance = dictionary["onchainBalance"] as? String ?? "0.00000000"
+        onchainBalance = dictionary["onchainBalance"] as? String ?? "0.00 000 000"
     }
     
     public var description: String {

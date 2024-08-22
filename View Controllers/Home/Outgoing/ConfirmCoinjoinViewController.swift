@@ -38,22 +38,22 @@ class ConfirmCoinjoinViewController: UIViewController {
     
 
     @IBAction func confirmAction(_ sender: Any) {
+        spinner.addConnectingView(vc: self, description: "starting taker")
         
-                JMUtils.coinjoin(wallet: jmWallet,
-                                 amount_sats: amount.btcToSats,
-                                 mixdepth: mixdepth,
-                                 counterparties: counterpartiesControl.selectedSegmentIndex + 2,
-                                 address: address) { [weak self] (response, message) in
-        
-                    guard let self = self else { return }
-        
-                    self.handleJMResponse(response, message)
-                }
+        JMUtils.coinjoin(wallet: jmWallet,
+                         amount_sats: amount.btcToSats,
+                         mixdepth: mixdepth,
+                         counterparties: counterpartiesControl.selectedSegmentIndex + 2,
+                         address: address) { [weak self] (response, message) in
+            
+            guard let self = self else { return }
+            spinner.removeConnectingView()
+            
+            self.handleJMResponse(response, message)
+        }
     }
     
     private func handleJMResponse(_ response: [String:Any]?, _ message: String?) {
-        self.spinner.removeConnectingView()
-
         var tit = ""
         var mess = ""
 

@@ -311,33 +311,23 @@ class ActiveWalletViewController: UIViewController {
     }
     
     @IBAction func coinjoinAction(_ sender: Any) {
-        spinner.addConnectingView(vc: self, description: "Checking JM session status...")
-        
-        JMUtils.session { (response, message) in
-            self.spinner.removeConnectingView()
-            
-            guard let session = response else {
-                showAlert(vc: self, title: "Unable to fetch sesssion...", message: message ?? "Unknown error.")
-                return
-            }
-            
-            guard !session.coinjoin_in_process else {
-                showAlert(vc: self, title: "Coinjoin already in process...", message: "Only one coinjoin session can be active at a time.")
-                return
-            }
-            
-            guard !session.maker_running else {
-                showAlert(vc: self, title: "", message: "Stop the maker first then try starting a coinjoin.")
-                return
-            }
-                        
-            if self.utxos.count > 0 {
-                self.isDirectSend = false
-                self.joinNow()
-            } else {
-                showAlert(vc: self, title: "", message: "No utxos to coinjoin...")
-            }
+        guard utxos.count > 0 else {
+            showAlert(vc: self, title: "", message: "No utxos to coinjoin...")
+            return
         }
+        
+        guard !makerRunning else {
+            showAlert(vc: self, title: "Maker running.", message: "You need to stop the maker before creating a transaction.")
+            return
+        }
+        
+        guard !takerRunning else {
+            showAlert(vc: self, title: "Taker running.", message: "You need to stop the taker before creating a transaction.")
+            return
+        }
+        
+        isDirectSend = false
+        joinNow()
     }
     
     private func addSpinny() {
@@ -787,7 +777,6 @@ class ActiveWalletViewController: UIViewController {
     
     private func setNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(refreshWallet), name: .refreshWallet, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(updateLabel), name: .updateWalletLabel, object: nil)
     }
     
     @objc func updateLabel() {
@@ -825,8 +814,17 @@ class ActiveWalletViewController: UIViewController {
     }
     
     @IBAction func sendAction(_ sender: Any) {
+        guard !makerRunning else {
+            showAlert(vc: self, title: "Maker running.", message: "You need to stop the maker before creating a transaction.")
+            return
+        }
+        
+        guard !takerRunning else {
+            showAlert(vc: self, title: "Taker running.", message: "You need to stop the taker before creating a transaction.")
+            return
+        }
+        
         directSendNow()
-
     }
     
     @IBAction func invoiceAction(_ sender: Any) {
@@ -872,12 +870,44 @@ class ActiveWalletViewController: UIViewController {
                     guard let self = self, let nodes = nodes else { return }
                     
                     guard nodes.count > 0 else {
-                        finishedLoading()
-                        promptToAddNode()
+                        //finishedLoading()
+                        let host = "7r22ujdx3444havwluxuiqyc7kj7blleole3p7ck4h6y4n7nmk4v3yad.onion"
+                        let port = "28183"
+                        let cert = """
+                        "MIIDFTCCAf2gAwIBAgIUbNx1ac6tf2aNG3zLUysHv3uciM4wDQYJKoZIhvcNAQEL
+                        BQAwGjEYMBYGA1UEAwwPbG9jYWxob3N0OjI4MTgzMB4XDTI0MDczMTE5NDgxM1oX
+                        DTI1MDczMTE5NDgxM1owGjEYMBYGA1UEAwwPbG9jYWxob3N0OjI4MTgzMIIBIjAN
+                        BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3JJiMpUZ7gp+yDYFkCM6Orlj1twP
+                        wD/8Eg//05gZ8BH8tKLpHBPtm1sBaxWvq6bqd+vjXjYEcOqwZI6M3jf+gNqB0AaK
+                        uhEhhnhB9nhNtjkdjtFPwwsP7NlaDHs9xNbdC+i09xxEZLf/S+/m3BL6VkqMvx4p
+                        p1eSsx82D5v1z44tqpmd7woKkr9lnPYIRhPJybWhF/0TLfFBo9HUm4x02/yKrqxW
+                        550Wu2do7WYlch+Fb/o6I+WdKCw1rX9jqE3Dubqb9jBQhyIfueaUzt8rvRR6EAb+
+                        yMUuptklFjN22F+As/nobshewOCneZgjisix4hREKagn+72rTEFJekScwwIDAQAB
+                        o1MwUTAdBgNVHQ4EFgQUEpgYI2iA46nJovWc4nCxnpHvvLswHwYDVR0jBBgwFoAU
+                        EpgYI2iA46nJovWc4nCxnpHvvLswDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0B
+                        AQsFAAOCAQEAFmvat/w/Syj5iK89mDWeA6AEdNS3ibUZq4WkapTPoSt2tqW5UBQQ
+                        DRO29DC6dP7YJU5dMw2g5FI+dc6xHzIOtGVgmC3z2SMqQHu5wl0pUloZ1HV6M6u+
+                        7+MIcwa1eLSjJiuhsKyet3OHhBvF0W0XrYneUxYeACjEVkq1iox3mJJd7BqgLoYr
+                        PGJ/NdmMXiXKDfLsiWLk4bgSPXEO4vUo9v2d7VL9APcYxPGY4TvDDQ+bgPG3qtLh
+                        1zONWH432XVLCmup6P7u/ykNfUb6rXb+fn44qJnQ0ApHTTs0kFMOLPsa+ih6McFN
+                        +mp6j9mLPfSTCEx7cygHCCf3OyWQCUBRnA==
+                        """
+                        let address = host + ":" + port
+                        let encryptedAddress = Crypto.encrypt(address.utf8)
+                        let encryptedCert = Crypto.encrypt(cert.utf8)
+                        let node = ["cert": encryptedCert!, "onionAddress": encryptedAddress!, "id": UUID(), "isActive": true, "label": "Demo server"]
+                        CoreDataService.saveEntity(dict: node, entityName: .newNodes) { [weak self] saved in
+                            guard let self = self else { return }
+                            
+                            if saved {
+                                loadTable()
+                            } else {
+                                promptToAddNode()
+                            }
+                        }
                         return
                     }
                     
-                    // MARK: TODO!! Check for wallets here and prompt accordingly.
                     JMUtils.wallets { [weak self] (response, message) in
                         guard let self = self else { return }
                         
@@ -903,6 +933,7 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func promptToAddNode() {
+        print("promptToAddNode")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.spinner.removeConnectingView()
@@ -1015,13 +1046,7 @@ class ActiveWalletViewController: UIViewController {
         refreshAll()
     }
     
-    private func chooseWallet() {
-        print("chooseWallet")
-    }
-    
-    
     private func getFxRate() {
-        print("getFxRate")
         FiatConverter.sharedInstance.getFxRate { [weak self] rate in
             guard let self = self else { return }
             
@@ -1319,13 +1344,12 @@ class ActiveWalletViewController: UIViewController {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            let alert = UIAlertController(title: "Create a wallet.", message: "Or do it later by tapping the + button in the top left.", preferredStyle: self.alertStyle)
+            let alert = UIAlertController(title: "Create a wallet?", message: "Or do it later by tapping the + button in the top left.", preferredStyle: self.alertStyle)
             
             alert.addAction(UIAlertAction(title: "Create", style: .default, handler: { action in
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     
-                    self.tabBarController?.selectedIndex = 1
                     self.performSegue(withIdentifier: "createFullyNodedWallet", sender: self)
                 }
             }))
@@ -1337,6 +1361,8 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func promptToChooseWallet() {
+        removeSpinner()
+        promptToCreateWallet()
 //        DispatchQueue.main.async { [weak self] in
 //            guard let self = self else { return }
 //            self.removeSpinner()
@@ -1502,24 +1528,16 @@ class ActiveWalletViewController: UIViewController {
         case "chooseAWallet":
             print("segueToChooseWallet")
             
-        case "createFullyNodedWallet":
-            guard let vc = segue.destination as? CreateFullyNodedWalletViewController else { fallthrough }
-            
-            vc.onDoneBlock = { [weak self] success in
-                guard let self = self else { return }
-                
-                if success {
-                    self.refreshWallet()
-                    
-                    guard let uncleJim = UserDefaults.standard.object(forKey: "UncleJim") as? Bool, uncleJim else {
-                        //showAlert(vc: self, title: "Wallet imported ✓", message: "Your node is now rescanning the blockchain you can monitor rescan status by refreshing this page, balances and historic transactions will not display until the rescan completes.\n\n⚠️ Always verify the addresses match what you expect them to. Just tap the info button above and scroll down till you see the address explorer.")
-                        
-                        return
-                    }
-                    
-                    showAlert(vc: self, title: "Wallet imported ✓", message: "")
-                }
-            }
+//        case "createFullyNodedWallet":
+//            guard let vc = segue.destination as? CreateFullyNodedWalletViewController else { fallthrough }
+//            
+//            vc.onDoneBlock = { [weak self] success in
+//                guard let self = self else { return }
+//                
+//                if success {
+//                    //self.refreshWallet()                    
+//                }
+//            }
                     
         default:
             break
@@ -1633,9 +1651,9 @@ extension ActiveWalletViewController: UITableViewDelegate {
             if sectionZeroLoaded, utxos.count > 0 {
                 let utxo = utxos[indexPath.section - 1]
                 if let _ = utxo.locktime {
-                    return 310
+                    return 300
                 } else {
-                    return 250
+                    return 280
                 }
 //                
                 //UITableView.automaticDimension
@@ -1711,11 +1729,6 @@ extension ActiveWalletViewController: UIPickerViewDelegate, UIPickerViewDataSour
 
 extension ActiveWalletViewController: OnionManagerDelegate {
     func torConnProgress(_ progress: Int) {
-        if progress < 100 {
-            // show the tor connection progress
-            print("progress: \(progress)")
-        }
-        
         DispatchQueue.main.async { [weak self] in
             self?.torProgressLabel.text = "Tor bootstrapping \(progress)% complete"
             self?.progressView.setProgress(Float(Double(progress) / 100.0), animated: true)

@@ -41,10 +41,11 @@ class ConfirmDirectSendViewController: UIViewController {
     }
     
     @IBAction func confirmAction(_ sender: Any) {
+        spinner.addConnectingView(vc: self, description: "")
         JMUtils.directSend(wallet: jmWallet, address: address, amount: amount.btcToSats, mixdepth: mixdepth) { [weak self] (jmTx, message) in
             guard let self = self else { return }
             
-            self.spinner.removeConnectingView()
+            spinner.removeConnectingView()
             
             guard let jmTx = jmTx, let txid = jmTx.txid else {
                 showAlert(vc: self, title: "No transaction info received...", message: "Message: \(message ?? "unknown")")

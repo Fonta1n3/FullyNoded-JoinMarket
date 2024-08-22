@@ -40,14 +40,6 @@ enum Crypto {
         return try? ChaChaPoly.seal(data, using: SymmetricKey(data: key)).combined
     }
     
-    static func sign(_ data: Data) -> Data? {
-        guard let key = KeyChain.getData("privateKey") else { return nil }
-        
-        guard let privkey = try? Curve25519.Signing.PrivateKey(rawRepresentation: key.bytesNostr) else { return nil }
-        
-        return try! privkey.signature(for: data)
-    }
-    
 //    static func verify(_ sig: Data, data: Data) -> Bool? {
 //        guard let key = KeyChain.getData("privateKey") else { return nil }
 //        guard let privkey = try? Curve25519.Signing.PrivateKey(rawRepresentation: key.bytesNostr) else { return nil }

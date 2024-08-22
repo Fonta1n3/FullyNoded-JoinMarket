@@ -11,7 +11,7 @@ import UIKit
 
 class CreateFullyNodedWalletViewController: UIViewController, UINavigationControllerDelegate, UIDocumentPickerDelegate {
         
-    var onDoneBlock:(((Bool)) -> Void)?
+    //var onDoneBlock:(((Bool)) -> Void)?
     var spinner = ConnectingView()
     var jmMessage = ""
     var password = ""
@@ -140,8 +140,6 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                 }
             }
         }
-        
-        
     }
     
     @IBAction func importAction(_ sender: Any) {
@@ -332,13 +330,6 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
         }
     }
     
-    private func processImportedString(_ item: String) {
-        if Keys.validMnemonic(item) {
-            
-        } else {
-            showAlert(vc: self, title: "Unsupported import.", message: item + " is not a supported import option, please let us know about this so we can add support.")
-        }
-    }
     
     // MARK: - Navigation
 
@@ -354,24 +345,24 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             vc.words = words
             vc.jmWallet = jmWallet
             
-        case "segueToScanner":
-            if #available(macCatalyst 14.0, *) {
-                guard let vc = segue.destination as? QRScannerViewController else { fallthrough }
-                
-                vc.onDoneBlock = { [weak self] item in
-                    guard let self = self else { return }
-                    
-                    guard let item = item else {
-                        return
-                    }
-                    
-                    #if(DEBUG)
-                    print("item: \(item)")
-                    #endif
-                    
-                    self.processImportedString(item)
-                }
-            }
+//        case "segueToScanner":
+//            if #available(macCatalyst 14.0, *) {
+//                guard let vc = segue.destination as? QRScannerViewController else { fallthrough }
+//                
+//                vc.onDoneBlock = { [weak self] item in
+//                    guard let self = self else { return }
+//                    
+//                    guard let item = item else {
+//                        return
+//                    }
+//                    
+//                    #if(DEBUG)
+//                    print("item: \(item)")
+//                    #endif
+//                    
+//                    self.processImportedString(item)
+//                }
+//            }
             
         default:
             break
