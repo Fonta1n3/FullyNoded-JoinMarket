@@ -27,7 +27,15 @@ enum Crypto {
     }
     
     static func encrypt(_ data: Data) -> Data? {
-        guard let key = KeyChain.getData("privateKey") else { return nil }
+        guard let key = KeyChain.getData("privateKey") else {
+            guard let key = secret() else { return nil }
+            
+            if KeyChain.set(key, forKey: "privateKey") {
+                return encrypt(data)
+            } else {
+                return nil
+            }
+        }
         
         return try? ChaChaPoly.seal(data, using: SymmetricKey(data: key)).combined
     }

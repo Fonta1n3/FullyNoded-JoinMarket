@@ -23,7 +23,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     var isFiat = false
     
     @IBOutlet weak var invoiceHeader: UILabel!
-    @IBOutlet weak var addressImageView: UIImageView!
     @IBOutlet var amountField: UITextField!
     @IBOutlet var labelField: UITextField!
     @IBOutlet var qrView: UIImageView!
@@ -40,7 +39,6 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         configureView(fieldsBackground)
         configureView(addressBackground)
         configureView(invoiceBackground)
-        addressImageView.layer.magnificationFilter = .nearest
         confirgureFields()
         configureTap()
         addDoneButtonOnKeyboard()

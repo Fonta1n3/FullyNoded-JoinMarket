@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import AVFoundation
+//import AVFoundation
 
 class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigationControllerDelegate {
     
@@ -17,29 +17,27 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     var createNew = Bool()
     var newNode = [String:Any]()
     var isInitialLoad = Bool()
-    let imagePicker = UIImagePickerController()
-    var scanNow = false
-    var jmWallet: JMWallet?
-    var words: String?
-    var password: String?
+    //let imagePicker = UIImagePickerController()
+    //var scanNow = false
+//    var jmWallet: JMWallet?
+//    var words: String?
+//    var password: String?
     
     
+    @IBOutlet weak var portField: UITextField!
     @IBOutlet weak var masterStackView: UIStackView!
-    @IBOutlet weak var addressHeader: UILabel!
-    @IBOutlet weak var certHeader: UILabel!
     @IBOutlet weak var certField: UITextField!
-    @IBOutlet weak var scanQROutlet: UIBarButtonItem!
-    @IBOutlet weak var header: UILabel!
+    //@IBOutlet weak var scanQROutlet: UIBarButtonItem!
     @IBOutlet var nodeLabel: UITextField!
     @IBOutlet var rpcLabel: UILabel!
     @IBOutlet var saveButton: UIButton!
     @IBOutlet weak var onionAddressField: UITextField!
-    @IBOutlet weak var addressHeaderOutlet: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         masterStackView.alpha = 0
         navigationController?.delegate = self
+        portField.delegate = self
         configureTapGesture()
         nodeLabel.delegate = self
         onionAddressField.delegate = self
@@ -47,18 +45,18 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         onionAddressField.isSecureTextEntry = false
         saveButton.clipsToBounds = true
         saveButton.layer.cornerRadius = 8
-        header.text = "Node Credentials"
         navigationController?.delegate = self
-        onionAddressField.text = "localhost:28183"
+        onionAddressField.placeholder = "ugouyfiytfd.onion"
         nodeLabel.text = "Join Market"
+        portField.text = "28183"
     }
     
     override func viewDidAppear(_ animated: Bool) {
         loadValues()
         
-        if scanNow {
-            segueToScanNow()
-        }
+//        if scanNow {
+//            segueToScanNow()
+//        }
     }
     
     @IBAction func scanQuickConnect(_ sender: Any) {
@@ -100,7 +98,14 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                 return
             }
             
-            guard let encryptedOnionAddress = encryptedValue(onionAddressText.utf8) else {
+            guard let port = portField.text else {
+                showAlert(vc: self, title: "", message: "Port is required.")
+                return
+            }
+            
+            let address = onionAddressText + ":" + port
+            
+            guard let encryptedOnionAddress = encryptedValue(address.utf8) else {
                 spinner.removeConnectingView()
                 showAlert(vc: self, title: "", message: "Error encrypting the address.")
                 return
@@ -174,6 +179,7 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                 showAlert(vc: self, title: "", message: "Fill out all fields first")
                 return
             }
+            
             save()
         } else {
             //updating
@@ -185,13 +191,9 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
                 }
             }
             
-            if onionAddressField != nil, let addressText = onionAddressField.text {
-                let decryptedAddress = addressText.utf8
-                let arr = addressText.split(separator: ":")
-                guard arr.count == 2 else {
-                    showAlert(vc: self, title: "Not updated, port missing...", message: "Please make sure you add the port at the end of your onion hostname, such as xjshdu.onion:28183")
-                    return
-                }
+            if let host = onionAddressField.text, let port = portField.text {
+                let address = host + ":" + port
+                let decryptedAddress = address.utf8
                 
                 guard let encryptedOnionAddress = encryptedValue(decryptedAddress) else { return }
                 
@@ -252,22 +254,16 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             return decrypted.utf8String ?? ""
         }
         
-        if selectedNode != nil {
-            let node = NodeStruct(dictionary: selectedNode!)
-                if node.label != "" {
-                    nodeLabel.text = node.label
-                }
-                                                
+        if let selectedNode = selectedNode {
+            let node = NodeStruct(dictionary: selectedNode)
+            nodeLabel.text = node.label
             let decrypted = decryptedValue(node.onionAddress)
-                    if onionAddressField != nil {
-                        onionAddressField.text = decrypted
-                    }
-                
-                if certField != nil {
-                    if let decryptedCert = Crypto.decrypt(node.cert) {
-                        certField.text = decryptedCert.utf8String ?? ""
-                    }
-                }
+            let arr = decrypted.components(separatedBy: ":")
+            onionAddressField.text = "\(arr[0])"
+            portField.text = "\(arr[1])"
+            if let decryptedCert = Crypto.decrypt(node.cert) {
+                certField.text = decryptedCert.utf8String ?? ""
+            }
         }
         
         DispatchQueue.main.async { [weak self] in
@@ -278,15 +274,10 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
     @objc func dismissKeyboard (_ sender: UITapGestureRecognizer) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if self.onionAddressField != nil {
-                self.onionAddressField.resignFirstResponder()
-            }
-            if self.nodeLabel != nil {
-                self.nodeLabel.resignFirstResponder()
-            }
-            if self.certField != nil {
-                self.certField.resignFirstResponder()
-            }
+            onionAddressField.resignFirstResponder()
+            nodeLabel.resignFirstResponder()
+            certField.resignFirstResponder()
+            portField.resignFirstResponder()
         }
     }
     
@@ -307,19 +298,19 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
         
     }
     
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        switch segue.identifier {
-        case "segueToBackUpInfo":
-            guard let vc = segue.destination as? SeedDisplayerViewController else { fallthrough }
-            
-            vc.jmWallet = self.jmWallet
-            vc.password = self.password
-            vc.words = self.words
-            
-        default:
-            break
-        }
-        
-    }
+//    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+//        switch segue.identifier {
+//        case "segueToBackUpInfo":
+//            guard let vc = segue.destination as? SeedDisplayerViewController else { fallthrough }
+//            
+//            vc.jmWallet = self.jmWallet
+//            vc.password = self.password
+//            vc.words = self.words
+//            
+//        default:
+//            break
+//        }
+//        
+//    }
     
 }

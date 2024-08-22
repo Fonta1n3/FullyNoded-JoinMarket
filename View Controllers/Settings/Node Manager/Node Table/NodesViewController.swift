@@ -58,7 +58,8 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
             self.reloadNodeTable()
             
             if self.nodeArray.count == 0 {
-                self.addNodePrompt()
+                //self.addNodePrompt()
+                showAlert(vc: self, title: "No nodes added yet.", message: "Tap the plus button to add one. You will need the address and SSL cert for your Join Market server.")
             }
         }
     }

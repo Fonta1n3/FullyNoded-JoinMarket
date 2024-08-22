@@ -20,6 +20,8 @@ class UTXOCell: UITableViewCell {
     private var isLocked: Bool!
     private unowned var delegate: UTXOCellDelegate!
     
+    @IBOutlet private weak var lockedImage: UIImageView!
+    @IBOutlet private weak var confsImage: UIImageView!
     @IBOutlet private weak var locktimeOutlet: UILabel!
     @IBOutlet private weak var unfreezeOutlet: UIButton!
     @IBOutlet private weak var freezeOutlet: UIButton!
@@ -38,7 +40,7 @@ class UTXOCell: UITableViewCell {
         layer.borderWidth = 0.5
         layer.cornerRadius = 8
         
-        roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
+        //roundeBackgroundView.backgroundColor = #colorLiteral(red: 0.05172085258, green: 0.05855310153, blue: 0.06978280196, alpha: 1)
         
         selectionStyle = .none
     }
@@ -55,8 +57,10 @@ class UTXOCell: UITableViewCell {
         
         if let locktime = utxo.locktime {
             locktimeOutlet.text = "Locked until \(locktime)"
+            lockedImage.tintColor = .systemOrange
         } else {
             locktimeOutlet.text = ""
+            lockedImage.tintColor = .clear
         }
         
         mixdepthOutlet.text = "\(utxo.mixdepth)"
@@ -80,13 +84,13 @@ class UTXOCell: UITableViewCell {
         
         amountLabel.text = utxo.value.satsToBtcDouble.btcBalanceWithSpaces
         if let fxRate = fxRate {
-            amountLabel.text! += " (\((utxo.value.satsToBtcDouble * fxRate).fiatString))"
+            amountLabel.text! += "  ~\((utxo.value.satsToBtcDouble * fxRate).fiatString)"
         }
         
         if utxo.confirmations == 0 {
-            confirmationsLabel.textColor = .systemRed
+            confsImage.tintColor = .systemRed
         } else {
-            confirmationsLabel.textColor = .systemGreen
+            confsImage.tintColor = .systemGreen
         }
         
         confirmationsLabel.text = "\(utxo.confirmations) confs"

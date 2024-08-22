@@ -311,7 +311,7 @@ class ActiveWalletViewController: UIViewController {
     }
     
     @IBAction func coinjoinAction(_ sender: Any) {
-        spinner.addConnectingView(vc: self, description: "checking JM session status...")
+        spinner.addConnectingView(vc: self, description: "Checking JM session status...")
         
         JMUtils.session { (response, message) in
             self.spinner.removeConnectingView()
@@ -356,7 +356,7 @@ class ActiveWalletViewController: UIViewController {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.addSpinny()
-            self.jmStatusLabel.text = "checking join market status..."
+            self.jmStatusLabel.text = "Checking join market status..."
             self.jmStatusLabel.alpha = 1
 
             JMUtils.session { [weak self] (response, message) in
@@ -364,7 +364,7 @@ class ActiveWalletViewController: UIViewController {
                 guard let status = response else {
                     DispatchQueue.main.async { [weak self] in
                         guard let self = self else { return }
-                        self.jmStatusLabel.text = "join market inactive"
+                        self.jmStatusLabel.text = "Join Market inactive"
                         self.jmStatusImage.tintColor = .systemRed
                         self.hideJmSpinner()
                         showAlert(vc: self, title: "", message: "Join Market server doesn't seem to be responding, are you sure it is on?")
@@ -1633,11 +1633,12 @@ extension ActiveWalletViewController: UITableViewDelegate {
             if sectionZeroLoaded, utxos.count > 0 {
                 let utxo = utxos[indexPath.section - 1]
                 if let _ = utxo.locktime {
-                    return 423
+                    return 310
                 } else {
-                    return 383
+                    return 250
                 }
-                
+//                
+                //UITableView.automaticDimension
             } else {
                 return 47
             }
