@@ -206,7 +206,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
             guard let self = self else { return }
             
             self.addressOutlet.alpha = 1
-            self.addressOutlet.text = address
+            self.addressOutlet.text = address.withSpaces
             self.addressString = address
             self.updateQRImage()
             //self.addressImageView.image = LifeHash.image(address)

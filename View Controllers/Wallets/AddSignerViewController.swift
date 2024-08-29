@@ -251,6 +251,8 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
     private func hideKeyboards() {
         DispatchQueue.main.async { [unowned vc = self] in
             vc.textView.resignFirstResponder()
+            vc.passwordField.resignFirstResponder()
+            vc.walletNameField.resignFirstResponder()
         }
     }
     

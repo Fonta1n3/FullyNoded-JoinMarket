@@ -15,7 +15,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     private let ud = UserDefaults.standard
     private var addButton = UIBarButtonItem()
     private var editButton = UIBarButtonItem()
-    private var now: Date = .now
+    private var now: Date = Date()
     private var firstTap: Date?
     private var lastTap: Date?
     private var authenticated = false
@@ -132,7 +132,7 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
         func editNow() {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
-                self.firstTap = .now
+                self.firstTap = Date()
                 guard let id = sender.restorationIdentifier, let section = Int(id) else { return }
                 self.selectedIndex = section
                 self.performSegue(withIdentifier: "updateNode", sender: self)
