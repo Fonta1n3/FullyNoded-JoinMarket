@@ -267,20 +267,18 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     private func addNodePrompt() {
-        self.segueToAddNodeManually()
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//            
-//            self.isLightning = false
-//            self.isJoinMarket = true
-//            self.isBitcoinCore = false
-//            self.segueToAddNodeManually()
-//        }
+        let alert = UIAlertController(title: "Add a node", message: "You can scan a QuickConneect QR from FullyNoded-Server or add it manually.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Scan QR", style: .default, handler: { [weak self] action in
+            self?.segueToScanNode()
+        }))
+        alert.addAction(UIAlertAction(title: "Manually", style: .default, handler: { [weak self] action in
+            self?.segueToAddNodeManually()
+        }))
+        self.present(alert, animated: true, completion: nil)
     }
     
     @IBAction func addNode(_ sender: Any) {
-        //addNodePrompt()
-        self.segueToAddNodeManually()
+        addNodePrompt()
     }
         
     private func segueToAddNodeManually() {
@@ -297,19 +295,34 @@ class NodesViewController: UIViewController, UITableViewDelegate, UITableViewDat
     
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        
-        if segue.identifier == "updateNode" {
+        switch segue.identifier {
+        case "segueToScanAddNode":
+            if let vc = segue.destination as? QRScannerViewController {
+                vc.onDoneBlock = { url in
+                    guard let url = url else { return }
+                    QuickConnect.addNode(url: url) { [weak self] (success, errorMessage) in
+                        guard success else {
+                            showAlert(vc: self, title: "There was an issue adding your node.", message: errorMessage ?? "Unnown error.")
+                            return
+                        }
+                        self?.reloadTable()
+                        showAlert(vc: self, title: "", message: "Node added ✓")
+                    }
+                }
+            }
+        case "updateNode":
             if let vc = segue.destination as? NodeDetailViewController {
                 vc.selectedNode = self.nodeArray[selectedIndex]
                 vc.createNew = false
             }
-        }
-        
-        if segue.identifier == "segueToAddBitcoinCoreNode" {
+        case "segueToAddBitcoinCoreNode":
             if let vc = segue.destination as? NodeDetailViewController {
                 vc.createNew = true
             }
+        default:
+            break
         }
+        
     }
 }
 

@@ -89,6 +89,7 @@ class ActiveWalletViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        NotificationCenter.default.addObserver(self, selector: #selector(refreshWallet), name: .refreshNode, object: nil)
         jmVersionLabel.text = ""
         UserDefaults.standard.setValue(false, forKey: "hasPromptedToRescan")
         walletTable.delegate = self
@@ -118,8 +119,24 @@ class ActiveWalletViewController: UIViewController {
             initialLoad = false
             if TorClient.sharedInstance.state != .connected && TorClient.sharedInstance.state != .started {
                 TorClient.sharedInstance.start(delegate: self)
+                checkIfHostIsLocal()
             } else {
                 getFxRate()
+            }
+        }
+    }
+    
+    private func checkIfHostIsLocal() {
+        CoreDataService.retrieveEntity(entityName: .newNodes) { nodes in
+            guard let nodes = nodes else { return }
+            for node in nodes {
+                let n = NodeStruct(dictionary: node)
+                guard let decryptedAddress = Crypto.decrypt(n.onionAddress), let address = String(data: decryptedAddress, encoding: .utf8) else { return }
+                if n.isActive {
+                    if address.hasPrefix("127.0.0.1") || address.hasPrefix("localhost") {
+                        self.torConnFinished()
+                    }
+                }
             }
         }
     }
@@ -907,7 +924,7 @@ class ActiveWalletViewController: UIViewController {
                         }
                         return
                     }
-                    
+                                        
                     JMUtils.wallets { [weak self] (response, message) in
                         guard let self = self else { return }
                         

@@ -33,7 +33,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
             
             let tit = "Create a new wallet?"
                         
-            let alert = UIAlertController(title: tit, message: "You will be shown seed words and an unlock password, this information must be saved by you, without it you may lose access to your funds!", preferredStyle: .actionSheet)
+            let alert = UIAlertController(title: tit, message: "You will be shown seed words and an unlock password, this information must be saved by you, without it you may lose access to your funds!", preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "Create a new wallet", style: .default, handler: { [weak self] action in
                 guard let self = self else { return }
                 

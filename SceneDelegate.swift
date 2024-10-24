@@ -75,4 +75,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
     }
     
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        let urlcontexts = URLContexts.first
+        guard let url = urlcontexts?.url else { return }
+        
+        addNode(url: "\(url)")
+    }
+    
+    private func addNode(url: String) {
+        QuickConnect.addNode(url: url) { (success, _) in
+            guard success else { return }
+            
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .refreshNode, object: nil, userInfo: nil)
+            }
+        }
+    }
+    
 }

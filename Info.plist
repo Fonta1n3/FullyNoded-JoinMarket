@@ -74,37 +74,11 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
-			<key>CFBundleURLIconFile</key>
-			<string>ItunesArtwork@2x</string>
 			<key>CFBundleURLName</key>
-			<string>com.fontaine.fullynoded</string>
+			<string>com.fontaine.FullyNoded-JoinMarket</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>btcrpc</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>CFBundleURLIconFile</key>
-			<string>ItunesArtwork@2x</string>
-			<key>CFBundleURLName</key>
-			<string>com.fontaine.fullynoded</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>btcstandup</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>CFBundleURLIconFile</key>
-			<string>ItunesArtwork@2x</string>
-			<key>CFBundleURLName</key>
-			<string>com.fonatine.fullynoded</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>clightning-rpc</string>
+				<string>joinmarket</string>
 			</array>
 		</dict>
 	</array>
@@ -231,7 +205,5 @@
 			</dict>
 		</dict>
 	</array>
-	<key>NFCReaderUsageDescription</key>
-	<string>NFC tag to scan it</string>
 </dict>
 </plist>
