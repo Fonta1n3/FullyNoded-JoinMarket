@@ -262,7 +262,9 @@ class NodeDetailViewController: UIViewController, UITextFieldDelegate, UINavigat
             onionAddressField.text = "\(arr[0])"
             portField.text = "\(arr[1])"
             if let decryptedCert = Crypto.decrypt(node.cert) {
-                certField.text = decryptedCert.utf8String ?? ""
+                certField.text = decryptedCert.base64EncodedString()
+            } else {
+                print("unable to decrpyt cert")
             }
         }
         

@@ -19,6 +19,10 @@ class FiatConverter {
         if useBlockchainInfo {
             let url = NSURL(string: "https://blockchain.info/ticker")
             let task = torClient.session.dataTask(with: url! as URL) { (data, response, error) -> Void in
+                guard error == nil else {
+                    completion(nil)
+                    return
+                }
                 guard let urlContent = data,
                       let json = try? JSONSerialization.jsonObject(with: urlContent, options: [.mutableContainers]) as? [String : Any],
                       let data = json["\(currency)"] as? NSDictionary,

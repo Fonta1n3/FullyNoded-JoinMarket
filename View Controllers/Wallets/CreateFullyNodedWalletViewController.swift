@@ -17,10 +17,15 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
     var password = ""
     var words = ""
     var jmWallet: JMWallet?
+    var isImporting = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationController?.delegate = self
+        
+        if isImporting {
+            importNow()
+        }
     }
     
     @IBAction func createJmWalletAction(_ sender: Any) {
@@ -143,6 +148,10 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
     }
     
     @IBAction func importAction(_ sender: Any) {
+        importNow()
+    }
+    
+    private func importNow() {
         spinner.addConnectingView(vc: self, description: "checking for existing wallets...")
         
         JMUtils.wallets { [weak self] (remoteJmWallets, message) in

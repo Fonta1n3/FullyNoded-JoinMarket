@@ -202,7 +202,9 @@ class JMRPC {
                 
                 guard let json = try? JSONSerialization.jsonObject(with: urlContent, options: .mutableLeaves) as? NSDictionary else {
                     if let httpResponse = response as? HTTPURLResponse {
+                        #if DEBUG
                         print("httpResponse.statusCode: \(httpResponse.statusCode)")
+                        #endif
                         switch httpResponse.statusCode {
                         case 401:
                             completion((nil, "Unauthorized. Go to settings to request a new token."))

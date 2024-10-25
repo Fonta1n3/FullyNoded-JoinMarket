@@ -42,6 +42,7 @@ class ActiveWalletViewController: UIViewController {
     private var mixDepth2Balance = 0.0
     private var mixDepth3Balance = 0.0
     private var mixDepth4Balance = 0.0
+    private var isLocalHost = false
     
     private let months = [
         ["January":"01"],
@@ -90,6 +91,7 @@ class ActiveWalletViewController: UIViewController {
         super.viewDidLoad()
         
         NotificationCenter.default.addObserver(self, selector: #selector(refreshWallet), name: .refreshNode, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(refreshWallet), name: .refreshWallet, object: nil)
         jmVersionLabel.text = ""
         UserDefaults.standard.setValue(false, forKey: "hasPromptedToRescan")
         walletTable.delegate = self
@@ -134,7 +136,13 @@ class ActiveWalletViewController: UIViewController {
                 guard let decryptedAddress = Crypto.decrypt(n.onionAddress), let address = String(data: decryptedAddress, encoding: .utf8) else { return }
                 if n.isActive {
                     if address.hasPrefix("127.0.0.1") || address.hasPrefix("localhost") {
-                        self.torConnFinished()
+                        DispatchQueue.main.async { [weak self] in
+                            self?.isLocalHost = true
+                            self?.torProgressLabel.isHidden = true
+                            self?.progressView.isHidden = true
+                            self?.blurView.isHidden = true
+                            self?.loadTable()
+                        }
                     }
                 }
             }
@@ -927,7 +935,7 @@ class ActiveWalletViewController: UIViewController {
                                         
                     JMUtils.wallets { [weak self] (response, message) in
                         guard let self = self else { return }
-                        
+                                                
                         guard let wallets = response, wallets.count > 0 else {
                             if let message = message {
                                 removeSpinner()
@@ -950,7 +958,6 @@ class ActiveWalletViewController: UIViewController {
     }
     
     private func promptToAddNode() {
-        print("promptToAddNode")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.spinner.removeConnectingView()
@@ -1073,7 +1080,9 @@ class ActiveWalletViewController: UIViewController {
                     
                     self.fxRateLabel.text = "no fx rate data"
                 }
-                loadTable()
+                if !isLocalHost {
+                    loadTable()
+                }
                 return
             }
             
@@ -1084,7 +1093,9 @@ class ActiveWalletViewController: UIViewController {
                 guard let self = self else { return }
                 
                 self.fxRateLabel.text = rate.exchangeRate
-                loadTable()
+                if !isLocalHost {
+                    loadTable()
+                }
             }
         }
     }
@@ -1379,59 +1390,9 @@ class ActiveWalletViewController: UIViewController {
     
     private func promptToChooseWallet() {
         removeSpinner()
-        promptToCreateWallet()
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//            self.removeSpinner()
-//            
-//            let alert = UIAlertController(title: "None of your wallets seem to be toggled on, please choose which wallet you want to use.", message: "", preferredStyle: self.alertStyle)
-//            
-//            alert.addAction(UIAlertAction(title: "Activate a Fully Noded wallet", style: .default, handler: { action in
-//                DispatchQueue.main.async { [weak self] in
-//                    guard let self = self else { return }
-//                    
-//                    self.tabBarController?.selectedIndex = 1
-//                    self.goChooseWallet()
-//                }
-//            }))
-//            
-//            CoreDataService.retrieveEntity(entityName: .wallets) { potentialJmWallets in
-//                guard let potentialJmWallets = potentialJmWallets else { return }
-//                
-//                var showJMOption = false
-//                
-//                for (i, potentialJmWallet) in potentialJmWallets.enumerated() {
-//                    if potentialJmWallet["id"] != nil {
-//                        let wStr = JMWallet(potentialJmWallet)
-//                        showJMOption = true
-//                        
-//                        if i + 1 == potentialJmWallets.count && showJMOption {
-//                            alert.addAction(UIAlertAction(title: "Activate a Join Market wallet", style: .default, handler: { action in
-//                                DispatchQueue.main.async { [weak self] in
-//                                    guard let self = self else { return }
-//                                    
-//                                    JMUtils.wallets { (response, message) in
-//                                        guard let jmwallets = response else {
-//                                            self.finishedLoading()
-//                                            showAlert(vc: self, title: "", message: message ?? "Unknown issue getting your JM wallets.")
-//                                            return
-//                                        }
-//                                        
-//                                        if jmwallets.count > 0 {
-//                                            self.promptToChooseJmWallet(jmWallets: jmwallets)
-//                                        }
-//                                    }
-//                                }
-//                            }))
-//                        }
-//                    }
-//                }
-//            }
-//            
-//            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-//            alert.popoverPresentationController?.sourceView = self.view
-//            self.present(alert, animated: true, completion: nil)
-//        }
+        DispatchQueue.main.async { [weak self] in
+            self?.performSegue(withIdentifier: "segueToImport", sender: self)
+        }
     }
     
     private func goChooseWallet() {
@@ -1442,8 +1403,7 @@ class ActiveWalletViewController: UIViewController {
     
     func reloadWalletData() {
         sectionZeroLoaded = false
-
-        self.getWalletBalance()
+        getWalletBalance()
     }
         
     private func addNavBarSpinner() {
@@ -1486,6 +1446,9 @@ class ActiveWalletViewController: UIViewController {
         }
         
         addNavBarSpinner()
+        if isLocalHost {
+            loadTable()
+        }
         getFxRate()
     }
     
@@ -1510,6 +1473,11 @@ class ActiveWalletViewController: UIViewController {
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         switch segue.identifier {
+            
+        case "segueToImport":
+            guard let vc = segue.destination as? CreateFullyNodedWalletViewController else { fallthrough }
+            
+            vc.isImporting = true
             
         case "spendFromWallet":
             guard let vc = segue.destination as? CreateRawTxViewController else { fallthrough }
@@ -1543,7 +1511,6 @@ class ActiveWalletViewController: UIViewController {
             vc.jmWallet = wallet!
             
         case "chooseAWallet":
-            print("segueToChooseWallet")
             
 //        case "createFullyNodedWallet":
 //            guard let vc = segue.destination as? CreateFullyNodedWalletViewController else { fallthrough }
