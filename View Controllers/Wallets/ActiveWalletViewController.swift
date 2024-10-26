@@ -1285,89 +1285,6 @@ class ActiveWalletViewController: UIViewController {
         }
     }
     
-   
-    
-    private func promptToRescan() {
-        let hasPrompted = UserDefaults.standard.value(forKey: "hasPromptedToRescan") as? Bool ?? false
-//        if !hasPrompted {
-//            UserDefaults.standard.setValue(true, forKey: "hasPromptedToRescan")
-//            DispatchQueue.main.async { [weak self] in
-//                guard let self = self else { return }
-//                
-//                let alert = UIAlertController(title: "No transactions found.", message: "Would you like to rescan the blockchain to search for transaction history and balances? Input the year you'd like to rescan from.", preferredStyle: self.alertStyle)
-//                
-//                let rescan = UIAlertAction(title: "Rescan", style: .default) { [weak self] (alertAction) in
-//                    guard let self = self else { return }
-//                    let textField = (alert.textFields![0] as UITextField)
-//                    var blockheight = 0
-//                    let currentYear = Int(Calendar.current.component(.year, from: .now))
-//                    if let text = textField.text {
-//                        var yearToScanFrom = Int(text) ?? 2009
-//                        
-//                        if yearToScanFrom <= currentYear {
-//                            if yearToScanFrom < 2010 {
-//                                yearToScanFrom = 2010
-//                            }
-//                            let yearsToScan = (currentYear - yearToScanFrom) + 1
-//                            let blocksToScan = yearsToScan * 55000
-//                            
-//                            spinner.addConnectingView(vc: self, description: "rescanning...")
-//                            
-//                            OnchainUtils.getBlockchainInfo { [weak self] (blockchainInfo, message) in
-//                                guard let self = self else { return }
-//                                
-//                                guard let blockchainInfo = blockchainInfo else {
-//                                    spinner.removeConnectingView()
-//                                    showAlert(vc: self, title: "", message: message ?? "Unknown issue getblockchaininfo.")
-//                                    return
-//                                }
-//                                
-//                                if !blockchainInfo.initialblockdownload {
-//                                    blockheight = blockchainInfo.blockheight - blocksToScan
-//                                    
-//                                    if blockchainInfo.pruned {
-//                                        if blockheight < blockchainInfo.pruneheight {
-//                                            blockheight = blockchainInfo.pruneheight
-//                                        }
-//                                    }
-//                                    
-//                                    OnchainUtils.rescanNow(from: blockheight) { [weak self] (started, message) in
-//                                        guard let self = self else { return }
-//                                        
-//                                        guard started else {
-//                                            spinner.removeConnectingView()
-//                                            showAlert(vc: self, title: "", message: message ?? "Unknown issue from rescan.")
-//                                            return
-//                                        }
-//                                        
-//                                        self.spinner.removeConnectingView()
-//                                        showAlert(vc: self, title: "", message: "Rescanning, you can refresh this page to see completion status.")
-//                                    }
-//                                } else {
-//                                    spinner.removeConnectingView()
-//                                    showAlert(vc: self, title: "", message: "Wait till your node is done syncing before attempting to rescan or use wallets.")
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//                
-//                alert.addTextField { (textField) in
-//                    textField.placeholder = "From year"
-//                    textField.keyboardAppearance = .dark
-//                    textField.keyboardType = .numberPad
-//                    textField.text = "2009"
-//                }
-//                
-//                alert.addAction(rescan)
-//                
-//                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-//                alert.popoverPresentationController?.sourceView = self.view
-//                self.present(alert, animated: true, completion: nil)
-//            }
-//        }
-    }
-    
     private func promptToCreateWallet() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -1509,19 +1426,6 @@ class ActiveWalletViewController: UIViewController {
             guard let vc = segue.destination as? InvoiceViewController else { fallthrough }
             
             vc.jmWallet = wallet!
-            
-        case "chooseAWallet":
-            
-//        case "createFullyNodedWallet":
-//            guard let vc = segue.destination as? CreateFullyNodedWalletViewController else { fallthrough }
-//            
-//            vc.onDoneBlock = { [weak self] success in
-//                guard let self = self else { return }
-//                
-//                if success {
-//                    //self.refreshWallet()                    
-//                }
-//            }
                     
         default:
             break

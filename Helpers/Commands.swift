@@ -10,6 +10,7 @@
 let rootUrl = "api/v1"
 
 public enum JM_REST {
+    case rescan(jmWallet: JMWallet, blockheight: Int)
     case recover
     case walletall
     case walletcreate
@@ -34,6 +35,8 @@ public enum JM_REST {
     
     var stringValue:String {
         switch self {
+        case .rescan(jmWallet: let wallet, blockheight: let blockheight):
+            return "\(rootUrl)/wallet/\(wallet.name)/rescanblockchain/\(blockheight)"
         case .recover:
             return "\(rootUrl)/wallet/recover"
         case .getinfo:

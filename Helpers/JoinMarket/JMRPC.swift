@@ -87,7 +87,8 @@ class JMRPC {
                     .makerStop(jmWallet: let wallet),
                     .takerStop(jmWallet: let wallet),
                     .getSeed(jmWallet: let wallet),
-                    .listutxos(jmWallet: let wallet):
+                    .listutxos(jmWallet: let wallet),
+                    .rescan(jmWallet: let wallet, blockheight: _):
                 httpMethod = "GET"
                 
                 guard let decryptedToken = Crypto.decrypt(wallet.token),

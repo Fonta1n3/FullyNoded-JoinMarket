@@ -295,7 +295,7 @@ class CreateFullyNodedWalletViewController: UIViewController, UINavigationContro
                                 //completion((nil, nil, "Error saving wallet."))
                                 return
                             }
-                            
+                                                        
                             DispatchQueue.main.async {
                                 NotificationCenter.default.post(name: .refreshWallet, object: nil)
                                 self.navigationController?.popToRootViewController(animated: true)

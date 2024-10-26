@@ -16,6 +16,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
     @IBOutlet weak var walletTypeControl: UISegmentedControl!
     @IBOutlet weak var passwordField: UITextField!
     @IBOutlet weak var walletNameField: UITextField!
+    @IBOutlet weak var blockheightField: UITextField!
     
     private let spinner = ConnectingView()
     var addedWords = [String]()
@@ -32,6 +33,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
         textView.delegate = self
         passwordField.delegate = self
         walletNameField.delegate = self
+        blockheightField.delegate = self
         addSignerOutlet.isEnabled = false
         wordView.layer.cornerRadius = 8
         wordView.layer.borderColor = UIColor.lightGray.cgColor
@@ -132,6 +134,10 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
                     guard walletSaved else {
                         showAlert(vc: self, title: "", message: "Error saving wallet.")
                         return
+                    }
+                    
+                    if let blockheight = self.blockheightField.text, let blockheightInt = Int(blockheight) {
+                        JMRPC.sharedInstance.command(method: .rescan(jmWallet: JMWallet(jmWallet), blockheight: blockheightInt), param: nil) { (_, _) in }
                     }
                     
                     DispatchQueue.main.async {
@@ -253,6 +259,7 @@ class AddSignerViewController: UIViewController, UITextFieldDelegate, UINavigati
             vc.textView.resignFirstResponder()
             vc.passwordField.resignFirstResponder()
             vc.walletNameField.resignFirstResponder()
+            vc.blockheightField.resignFirstResponder()
         }
     }
     
