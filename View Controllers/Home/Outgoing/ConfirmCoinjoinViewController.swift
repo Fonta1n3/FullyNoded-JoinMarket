@@ -43,7 +43,7 @@ class ConfirmCoinjoinViewController: UIViewController {
         JMUtils.coinjoin(wallet: jmWallet,
                          amount_sats: amount.btcToSats,
                          mixdepth: mixdepth,
-                         counterparties: counterpartiesControl.selectedSegmentIndex + 2,
+                         counterparties: counterpartiesControl.selectedSegmentIndex + 1,
                          address: address) { [weak self] (response, message) in
             
             guard let self = self else { return }
