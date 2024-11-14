@@ -1094,6 +1094,7 @@ class ActiveWalletViewController: UIViewController {
                 
                 self.fxRateLabel.text = rate.exchangeRate
                 if !isLocalHost {
+                    utxos.removeAll()
                     loadTable()
                 }
             }
@@ -1164,7 +1165,7 @@ class ActiveWalletViewController: UIViewController {
             
             
             var totalBalance = 0.0
-            
+            self.utxos.removeAll()
             for (i, utxo) in utxos.enumerated() {
                 let utxo = JMUtxo(utxo)
                 self.utxos.append(utxo)
