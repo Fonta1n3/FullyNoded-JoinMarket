@@ -11,8 +11,6 @@ import UIKit
 class ActiveWalletViewController: UIViewController {
     
     private var spinny: UIActivityIndicatorView = .init(style: .medium)
-    private var pickerView: UIPickerView!
-    private var datePickerView: UIVisualEffectView!
     private var onchainBalanceBtc = ""
     private var onchainBalanceFiat = ""
     private var sectionZeroLoaded = Bool()
@@ -43,31 +41,6 @@ class ActiveWalletViewController: UIViewController {
     private var mixDepth3Balance = 0.0
     private var mixDepth4Balance = 0.0
     private var isLocalHost = false
-    
-    private let months = [
-        ["January":"01"],
-        ["February":"02"],
-        ["March":"03"],
-        ["April":"04"],
-        ["May":"05"],
-        ["June":"06"],
-        ["July":"07"],
-        ["August":"08"],
-        ["September":"09"],
-        ["October":"10"],
-        ["November":"11"],
-        ["December":"12"]
-    ]
-    
-    private let years = [
-        "2024",
-        "2025",
-        "2026",
-        "2027"
-    ]
-    
-    private var month = ""
-    private var year = "2024"
     
     
     @IBOutlet weak private var coinjoinButtonOutlet: UIButton!
@@ -436,8 +409,6 @@ class ActiveWalletViewController: UIViewController {
                 }))
             }
             
-            
-            
             if mixDepth3Balance > 0.0 {
                 alert.addAction(UIAlertAction(title: "Mixdepth 3", style: .default, handler: { [weak self] action in
                     guard let self = self else { return }
@@ -454,7 +425,6 @@ class ActiveWalletViewController: UIViewController {
                 }))
             }
             
-
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
             alert.popoverPresentationController?.sourceView = self.view
             self.present(alert, animated: true, completion: nil)
@@ -503,8 +473,6 @@ class ActiveWalletViewController: UIViewController {
                 }))
             }
             
-            
-            
             if mixDepth3Balance > 0.0 {
                 alert.addAction(UIAlertAction(title: "Mixdepth 3", style: .default, handler: { [weak self] action in
                     guard let self = self else { return }
@@ -537,238 +505,6 @@ class ActiveWalletViewController: UIViewController {
         }
     }
     
-    @IBAction func createFidelityBondAction(_ sender: Any) {
-        if let wallet = wallet {
-            spinner.addConnectingView(vc: self, description: "checking fidelity bond status...")
-            isFidelity = true
-            JMUtils.fidelityStatus(wallet: wallet) { [weak self] (exists, message) in
-                guard let self = self else { return }
-                            
-                guard let exists = exists, exists else {
-                    self.promptToSelectTimelockDate()
-                    return
-                }
-                self.showFidelityBondOptions(wallet)
-            }
-        }
-    }
-    
-    private func showFidelityBondOptions(_ wallet: JMWallet) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            let tit = "Fidelity Bond"
-            let mess = ""
-
-            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-
-            alert.addAction(UIAlertAction(title: "Unfreeze fb", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                                
-                self.unfreezeFb(wallet)
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in
-                self.removeSpinner()
-            }))
-            
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func unfreezeFb(_ wallet: JMWallet) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
-            self.spinner.label.text = "unfreezing fb utxo..."
-            
-            JMUtils.unfreezeFb(wallet: wallet) { (response, message) in
-                self.spinner.removeConnectingView()
-                
-                guard let _ = response else {
-                    showAlert(vc: self, title: "There was an issue...", message: message ?? "Unknown issue unfreezing utxo.")
-                    return
-                }
-                
-                guard let message = message else {
-                    showAlert(vc: self, title: "Utxo unfrozen", message: "You should be able to join or earn with your expired fidelity bond funds now.")
-                    return
-                }
-                
-                showAlert(vc: self, title: "Message from JM:", message: message)
-            }
-        }
-    }
-    
-    private func promptToUnfreeze(utxoString: String) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            let tit = "Unfreeze?"
-            let mess = "This utxo is frozen, would you like to unfreeze it?"
-
-            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-
-            alert.addAction(UIAlertAction(title: "Unfreeze", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                spinner.addConnectingView(vc: self, description: "unfreezing utxo...")
-                let p: [String: Any] = ["utxo-string": utxoString, "freeze": false]
-                JMRPC.sharedInstance.command(method: .unfreeze(jmWallet: self.wallet!), param: p) { [weak self] (response, errorDesc) in
-                    guard let self = self else { return }
-                    
-                    guard let _ = response else {
-                        spinner.removeConnectingView()
-                        showAlert(vc: self, title: "", message: errorDesc ?? "Unknown issue unfreezing utxo...")
-                        return
-                    }
-                    
-                    loadTable()
-                }
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.removeSpinner()
-            }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func promptToSelectTimelockDate() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            let tit = "Fidelity Bond"
-            let mess = "A fidelity bond is a timelocked bitcoin address.\n\nCreating a fidelity bond increases your earning potential. The higher the amount/duration of the bond, the higher the earning potential.\n\nYou will be prompted to select an expiry date for the bond, you will NOT be able to spend these funds until that date."
-
-            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { [weak self] action in
-                guard let self = self else { return }
-                                                
-                self.selectTimelockDate()
-            }))
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [weak self] action in
-                guard let self = self else { return }
-                
-                self.removeSpinner()
-            }))
-            alert.popoverPresentationController?.sourceView = self.view
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    private func selectTimelockDate() {
-        datePickerView = fbBlurView()
-        view.addSubview(datePickerView)
-    }
-    
-    private func fbBlurView() -> UIVisualEffectView {
-        let effect = UIBlurEffect(style: .dark)
-        let blurView = UIVisualEffectView(frame: view.frame)
-        blurView.effect = effect
-        
-        pickerView = UIPickerView(frame: .init(x: 0, y: 200, width: self.view.frame.width, height: 300))
-        pickerView.delegate = self
-        pickerView.dataSource = self
-        blurView.contentView.addSubview(pickerView)
-        
-        let cal = Calendar.current
-        var monthInt = cal.component(.month, from: Date())
-        if monthInt == 12 {
-            monthInt = 1
-        } else {
-            monthInt += 1
-        }
-        
-        month = String(format: "%02d", monthInt)
-        
-        pickerView.selectRow(monthInt - 1, inComponent: 0, animated: true)
-        
-        let label = UILabel()
-        label.textColor = .lightGray
-        label.frame = CGRect(x: 16, y: pickerView.frame.minY - 40, width: pickerView.frame.width - 32, height: 40)
-        label.numberOfLines = 0
-        label.lineBreakMode = .byWordWrapping
-        label.text = "⚠️ Select the fidelity bond expiry date. Funds sent to the fidelity bond address will not be spendable until midnight (UTC) on the 1st day of the selected month/year."
-        label.sizeToFit()
-        blurView.contentView.addSubview(label)
-        
-        let button = UIButton()
-        button.frame = CGRect(x: 0, y: pickerView.frame.maxY + 20, width: view.frame.width, height: 40)
-        button.setTitle("Next", for: .normal)
-        button.addTarget(self, action: #selector(closeDatePicker), for: .touchUpInside)
-        button.setTitleColor(.systemTeal, for: .normal)
-        blurView.contentView.addSubview(button)
-        
-        let cancel = UIButton()
-        cancel.frame = CGRect(x: 0, y: button.frame.maxY + 20, width: view.frame.width, height: 40)
-        cancel.setTitle("Cancel", for: .normal)
-        cancel.addTarget(self, action: #selector(cancelDatePicker), for: .touchUpInside)
-        cancel.setTitleColor(.systemTeal, for: .normal)
-        blurView.contentView.addSubview(cancel)
-        
-        return blurView
-    }
-    
-    @objc func closeDatePicker() {
-        datePickerView.removeFromSuperview()
-        getFidelityAddress()
-    }
-    
-    @objc func cancelDatePicker() {
-        datePickerView.removeFromSuperview()
-    }
-    
-    private func getFidelityAddress() {
-        guard let wallet = wallet else {
-            return
-        }
-        
-        spinner.addConnectingView(vc: self, description: "getting timelocked address...")
-
-        let date = "\(year)-\(month)"
-        
-        JMUtils.fidelityAddress(wallet: wallet, date: date) { [weak self] (address, message) in
-            guard let self = self else { return }
-            
-            self.spinner.removeConnectingView()
-            
-            guard let address = address else {
-                showAlert(vc: self, title: "Unable to fetch timelocked address...", message: message ?? "Unknown.")
-                return
-            }
-            
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-
-                let tit = "Fidelity Bond"
-                let mess = "This is a timelocked bitcoin address which prevents you from spending the funds until midnight on the 1st of \(date) (UTC).\n\nYou will be presented with the transaction creator as normal with the fidelity bond address automatically entered."
-
-                let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-
-                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { [weak self] action in
-                    guard let self = self else { return }
-                                                    
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        
-                        self.isFidelity = true
-                        self.depositAddress = address
-                        self.performSegue(withIdentifier: "spendFromWallet", sender: self)
-                    }
-                }))
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-                alert.popoverPresentationController?.sourceView = self.view
-                self.present(alert, animated: true, completion: nil)
-            }
-        }
-    }
     
     private func hideData() {
         DispatchQueue.main.async { [weak self] in
@@ -780,9 +516,7 @@ class ActiveWalletViewController: UIViewController {
             self.walletTable.reloadData()
         }
     }
-        
-    
-    
+            
     private func configureButton(_ button: UIView) {
         button.layer.borderColor = UIColor.darkGray.cgColor
         button.layer.borderWidth = 0.5
@@ -895,41 +629,7 @@ class ActiveWalletViewController: UIViewController {
                     guard let self = self, let nodes = nodes else { return }
                     
                     guard nodes.count > 0 else {
-                        //finishedLoading()
-                        let host = "7r22ujdx3444havwluxuiqyc7kj7blleole3p7ck4h6y4n7nmk4v3yad.onion"
-                        let port = "28183"
-                        let cert = """
-                        "MIIDFTCCAf2gAwIBAgIUbNx1ac6tf2aNG3zLUysHv3uciM4wDQYJKoZIhvcNAQEL
-                        BQAwGjEYMBYGA1UEAwwPbG9jYWxob3N0OjI4MTgzMB4XDTI0MDczMTE5NDgxM1oX
-                        DTI1MDczMTE5NDgxM1owGjEYMBYGA1UEAwwPbG9jYWxob3N0OjI4MTgzMIIBIjAN
-                        BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3JJiMpUZ7gp+yDYFkCM6Orlj1twP
-                        wD/8Eg//05gZ8BH8tKLpHBPtm1sBaxWvq6bqd+vjXjYEcOqwZI6M3jf+gNqB0AaK
-                        uhEhhnhB9nhNtjkdjtFPwwsP7NlaDHs9xNbdC+i09xxEZLf/S+/m3BL6VkqMvx4p
-                        p1eSsx82D5v1z44tqpmd7woKkr9lnPYIRhPJybWhF/0TLfFBo9HUm4x02/yKrqxW
-                        550Wu2do7WYlch+Fb/o6I+WdKCw1rX9jqE3Dubqb9jBQhyIfueaUzt8rvRR6EAb+
-                        yMUuptklFjN22F+As/nobshewOCneZgjisix4hREKagn+72rTEFJekScwwIDAQAB
-                        o1MwUTAdBgNVHQ4EFgQUEpgYI2iA46nJovWc4nCxnpHvvLswHwYDVR0jBBgwFoAU
-                        EpgYI2iA46nJovWc4nCxnpHvvLswDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0B
-                        AQsFAAOCAQEAFmvat/w/Syj5iK89mDWeA6AEdNS3ibUZq4WkapTPoSt2tqW5UBQQ
-                        DRO29DC6dP7YJU5dMw2g5FI+dc6xHzIOtGVgmC3z2SMqQHu5wl0pUloZ1HV6M6u+
-                        7+MIcwa1eLSjJiuhsKyet3OHhBvF0W0XrYneUxYeACjEVkq1iox3mJJd7BqgLoYr
-                        PGJ/NdmMXiXKDfLsiWLk4bgSPXEO4vUo9v2d7VL9APcYxPGY4TvDDQ+bgPG3qtLh
-                        1zONWH432XVLCmup6P7u/ykNfUb6rXb+fn44qJnQ0ApHTTs0kFMOLPsa+ih6McFN
-                        +mp6j9mLPfSTCEx7cygHCCf3OyWQCUBRnA==
-                        """
-                        let address = host + ":" + port
-                        let encryptedAddress = Crypto.encrypt(address.utf8)
-                        let encryptedCert = Crypto.encrypt(cert.utf8)
-                        let node = ["cert": encryptedCert!, "onionAddress": encryptedAddress!, "id": UUID(), "isActive": true, "label": "Demo server"]
-                        CoreDataService.saveEntity(dict: node, entityName: .newNodes) { [weak self] saved in
-                            guard let self = self else { return }
-                            
-                            if saved {
-                                loadTable()
-                            } else {
-                                promptToAddNode()
-                            }
-                        }
+                        promptToAddNode()
                         return
                     }
                                         
@@ -982,48 +682,40 @@ class ActiveWalletViewController: UIViewController {
         }
     }
     
-    private func promptToChooseJmWallet(jmWallets: [String]) {
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self = self else { return }
-//            self.spinner.removeConnectingView()
-//            
-//            let tit = "Join Market wallet"
-//            
-//            let mess = "Please select which wallet you'd like to use."
-//            
-//            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
-//            for jmWallet in jmWallets {
-//                alert.addAction(UIAlertAction(title: jmWallet, style: .default, handler: { [weak self] action in
-//                    guard let self = self else { return }
-//                    
-//                    CoreDataService.retrieveEntity(entityName: .wallets) { wallets in
-//                        guard let wallets = wallets else { return }
-//                        
-//                        guard wallets.count > 0 else {
-//                            showAlert(vc: self, title: "", message: "No existing wallets, tap the + button to create a wallet.")
-//                            return
-//                        }
-//                        
-//                        for wallet in wallets {
-//                            if wallet["id"] != nil {
-//                                let wStr = JMWallet(wallet)
-//                                if wStr.isJm && wStr.jmWalletName == jmWallet {
-//                                    UserDefaults.standard.set(wStr.name, forKey: "walletName")
-//                                    self.wallet = wStr
-//                                    self.walletLabel = wStr.label
-//                                    self.loadBalances()
-//                                }
-//                            }
-//                        }
-//                    }
-//                    
-//                }))
-//            }
-//            
-//            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in }))
-//            alert.popoverPresentationController?.sourceView = self.view
-//            self.present(alert, animated: true, completion: nil)
-//        }
+    private func promptToUnfreeze(utxoString: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let tit = "Unfreeze?"
+            let mess = "This utxo is frozen, would you like to unfreeze it?"
+            
+            let alert = UIAlertController(title: tit, message: mess, preferredStyle: .actionSheet)
+            
+            alert.addAction(UIAlertAction(title: "Unfreeze", style: .default, handler: { [weak self] action in
+                guard let self = self else { return }
+                spinner.addConnectingView(vc: self, description: "unfreezing utxo...")
+                let p: [String: Any] = ["utxo-string": utxoString, "freeze": false]
+                JMRPC.sharedInstance.command(method: .unfreeze(jmWallet: self.wallet!), param: p) { [weak self] (response, errorDesc) in
+                    guard let self = self else { return }
+                    
+                    guard let _ = response else {
+                        spinner.removeConnectingView()
+                        showAlert(vc: self, title: "", message: errorDesc ?? "Unknown issue unfreezing utxo...")
+                        return
+                    }
+                    
+                    loadTable()
+                }
+            }))
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [weak self] action in
+                guard let self = self else { return }
+                
+                self.removeSpinner()
+            }))
+            alert.popoverPresentationController?.sourceView = self.view
+            self.present(alert, animated: true, completion: nil)
+        }
     }
     
     private func finishedLoading() {
@@ -1427,6 +1119,11 @@ class ActiveWalletViewController: UIViewController {
             guard let vc = segue.destination as? InvoiceViewController else { fallthrough }
             
             vc.jmWallet = wallet!
+            
+        case "segueToFidelity":
+            guard let vc = segue.destination as? FidelityBondViewController else { fallthrough }
+            
+            vc.wallet = wallet!
                     
         default:
             break
@@ -1568,53 +1265,7 @@ extension ActiveWalletViewController: UITableViewDataSource {
     }
 }
 
-extension ActiveWalletViewController: UIPickerViewDelegate, UIPickerViewDataSource {
-    func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 2
-    }
-    
-    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        switch component {
-        case 0:
-            return months.count
-        case 1:
-            return years.count
-        default:
-            return 0
-        }
-    }
-    
-    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        var toReturn:String?
-        switch component {
-        case 0:
-            let dict = months[row]
-            for (key, _) in dict {
-                toReturn = key
-            }
-        case 1:
-            toReturn = years[row]
-        default:
-            break
-        }
-        
-        return toReturn
-    }
-    
-    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        switch component {
-        case 0:
-            let dict = months[row]
-            for (_, value) in dict {
-                month = value
-            }
-        case 1:
-            year = years[row]
-        default:
-            break
-        }
-    }
-}
+
 
 extension ActiveWalletViewController: OnionManagerDelegate {
     func torConnProgress(_ progress: Int) {

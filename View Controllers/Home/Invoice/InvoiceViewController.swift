@@ -10,6 +10,8 @@ import UIKit
 
 class InvoiceViewController: UIViewController, UITextFieldDelegate {
     
+    var fidelityBondAddress: String?
+    var expiration: String?
     var textToShareViaQRCode = String()
     var addressString = String()
     var qrCode = UIImage()
@@ -32,6 +34,7 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet weak var fieldsBackground: UIView!
     @IBOutlet weak var addressBackground: UIView!
     @IBOutlet weak var invoiceBackground: UIView!
+    @IBOutlet weak var fidelityExpirationDate: UILabel!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -45,7 +48,15 @@ class InvoiceViewController: UIViewController, UITextFieldDelegate {
         addressOutlet.text = ""
         invoiceText.text = ""
         qrView.image = generateQrCode(key: "bitcoin:")
-        getReceiveAddressJm(wallet: jmWallet)
+        if let fidelityBondAddress = fidelityBondAddress, let expiration = expiration {
+            showAlert(vc: self, title: "Warning!", message: "This is a Fidelity Bond address, only deposit funds to it once! There is no benefit to depositing multiple utxos to a Fidelity Bond, in fact it harms your privacy to do so.")
+            addressString = fidelityBondAddress
+            fidelityExpirationDate.text = expiration
+            showAddress(address: addressString)
+        } else {
+            getReceiveAddressJm(wallet: jmWallet)
+        }
+        
     }
     
     
