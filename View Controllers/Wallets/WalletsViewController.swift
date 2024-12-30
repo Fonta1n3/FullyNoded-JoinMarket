@@ -36,9 +36,10 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
         JMUtils.wallets { [weak self] (response, message) in
             guard let self = self else { return }
             
-            spinner.removeConnectingView()
+           // spinner.removeConnectingView()
             
             guard let response = response, response.count > 0 else {
+                spinner.removeConnectingView()
                 showAlert(vc: self, title: "", message: "No wallets yet.")
                 return
             }
@@ -46,7 +47,10 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
             CoreDataService.retrieveEntity(entityName: .jmWallets) { [weak self] jmWallets in
                 guard let self = self else { return }
                 
-                guard let jmWallets = jmWallets else { return }
+                guard let jmWallets = jmWallets else {
+                    spinner.removeConnectingView()
+                    return
+                }
                 
                 for jmWallet in jmWallets {
                     let w = JMWallet(jmWallet)
@@ -55,7 +59,11 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
                     }
                 }
                 
-                JMUtils.session { (response, message) in
+                JMUtils.session { [weak self] (response, message) in
+                    guard let self = self else { return }
+                    
+                    spinner.removeConnectingView()
+                    
                     guard let session = response else { return }
                     
                     if let activeWallet = session.wallet_name {
@@ -77,7 +85,7 @@ class WalletsViewController: UIViewController, UITableViewDelegate, UITableViewD
         if selectedWallet.name == activeWallet {
             promptToLock(wallet: selectedWallet)
         } else {
-            for (i, wallet) in wallets.enumerated() {
+            for wallet in wallets {
                 if wallet.active && wallet.id != selectedWallet.id {
                     CoreDataService.update(id: wallet.id, keyToUpdate: "active", newValue: false, entity: .jmWallets) { _ in }
                 }

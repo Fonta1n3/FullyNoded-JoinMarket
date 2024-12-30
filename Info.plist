@@ -96,7 +96,7 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>So we can upload a QR code from your photo library</string>
+	<string>To scan a Quick Connect QR to connect your Join Market server.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>To log into the app with FaceID</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -108,7 +108,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We dont use your location</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>So we can upload a QR code from your photo library</string>
+	<string>To scan a Quick Connect QR to connect your Join Market server.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

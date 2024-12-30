@@ -413,7 +413,7 @@
                                     <color key="titleColor" systemColor="systemTealColor"/>
                                 </state>
                                 <connections>
-                                    <action selector="createFidelityBondAction:" destination="Dwu-lj-4IN" eventType="touchUpInside" id="vHs-bQ-sz9"/>
+                                    <segue destination="T5H-a3-ItC" kind="show" identifier="segueToFidelity" id="fHJ-Yl-YTZ"/>
                                 </connections>
                             </button>
                         </subviews>
@@ -887,13 +887,21 @@
                                                 <color key="textColor" white="0.66666666669999997" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                 <nil key="highlightedColor"/>
                                             </label>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="       " textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="cPQ-ZY-9KO">
+                                                <rect key="frame" x="8" y="77.5" width="24" height="14.5"/>
+                                                <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                                <color key="textColor" systemColor="systemGreenColor"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
                                         </subviews>
                                         <color key="backgroundColor" red="0.07570590101522845" green="0.07570590101522845" blue="0.07570590101522845" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         <constraints>
+                                            <constraint firstItem="cPQ-ZY-9KO" firstAttribute="leading" secondItem="PBP-HA-t9R" secondAttribute="leading" constant="8" id="7QL-O1-yQl"/>
                                             <constraint firstItem="zuZ-CM-DF7" firstAttribute="top" secondItem="PBP-HA-t9R" secondAttribute="top" constant="8" id="Kxn-k5-TZT"/>
                                             <constraint firstItem="5Ca-4Z-dsq" firstAttribute="top" secondItem="zuZ-CM-DF7" secondAttribute="bottom" constant="5.5" id="Pht-DT-ZyT"/>
                                             <constraint firstItem="5Ca-4Z-dsq" firstAttribute="leading" secondItem="PBP-HA-t9R" secondAttribute="leading" constant="8" id="RMJ-dL-VDL"/>
                                             <constraint firstItem="3s3-JS-kcA" firstAttribute="top" secondItem="PBP-HA-t9R" secondAttribute="top" constant="8" id="WbV-ko-zRy"/>
+                                            <constraint firstAttribute="bottom" secondItem="cPQ-ZY-9KO" secondAttribute="bottom" constant="8" id="Wst-o7-2xY"/>
                                             <constraint firstItem="3s3-JS-kcA" firstAttribute="leading" secondItem="PBP-HA-t9R" secondAttribute="leading" constant="8" id="Z0c-WU-T4t"/>
                                             <constraint firstItem="zuZ-CM-DF7" firstAttribute="leading" secondItem="vij-4Q-w8U" secondAttribute="trailing" constant="20" id="jV9-m7-XWE"/>
                                             <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="100" id="k4j-Ii-hzS"/>
@@ -1080,6 +1088,7 @@
                         <outlet property="addressBackground" destination="PBP-HA-t9R" id="Ugg-vl-MWp"/>
                         <outlet property="addressOutlet" destination="5Ca-4Z-dsq" id="jU0-vq-Na3"/>
                         <outlet property="amountField" destination="qFH-Vc-Ghn" id="hTO-DQ-Qnr"/>
+                        <outlet property="fidelityExpirationDate" destination="cPQ-ZY-9KO" id="igQ-Ww-oQE"/>
                         <outlet property="fieldsBackground" destination="0BT-sN-BLU" id="ecl-N7-HqF"/>
                         <outlet property="invoiceBackground" destination="It9-Q4-iaP" id="Jkn-Nz-XYJ"/>
                         <outlet property="invoiceHeader" destination="jcJ-Y0-mDC" id="nMc-IM-lFo"/>
@@ -1092,6 +1101,58 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="e3g-lC-Q3f" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="-8668" y="366.56671664167919"/>
+        </scene>
+        <!--Fidelity Bond View Controller-->
+        <scene sceneID="694-c3-RhV">
+            <objects>
+                <viewController id="T5H-a3-ItC" customClass="FidelityBondViewController" customModule="FullyNoded_JoinMarket" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="zBb-if-kQD">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="554"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" textAlignment="natural" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="j1F-qD-O3B">
+                                <rect key="frame" x="16" y="54" width="343" height="284.5"/>
+                                <mutableString key="text">A fidelity bond is a timelocked bitcoin address.  Creating a fidelity bond increases your earning potential as a maker. The higher the amount and duration of the bond, the higher the earning potential.  You will be prompted to select an expiry date for the bond, you will NOT be able to spend these funds until that date.   You must wait until your current fidelity bond expires before making a new one.</mutableString>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" systemColor="secondaryLabelColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Fidelity Bond" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="lFD-pw-c1C">
+                                <rect key="frame" x="16" y="20" width="119" height="26"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="21"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="sgV-Fb-0Dh">
+                                <rect key="frame" x="98.5" y="358.5" width="178" height="35"/>
+                                <color key="tintColor" systemColor="systemTealColor"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" title="Create Fidelity Bond"/>
+                                <connections>
+                                    <action selector="createNow:" destination="T5H-a3-ItC" eventType="touchUpInside" id="9Ex-6f-BqT"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="Xb5-UC-vQS"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstItem="sgV-Fb-0Dh" firstAttribute="centerX" secondItem="zBb-if-kQD" secondAttribute="centerX" id="Q9Q-xn-MwH"/>
+                            <constraint firstItem="j1F-qD-O3B" firstAttribute="top" secondItem="lFD-pw-c1C" secondAttribute="bottom" constant="8" id="YBs-n9-R4T"/>
+                            <constraint firstItem="lFD-pw-c1C" firstAttribute="leading" secondItem="Xb5-UC-vQS" secondAttribute="leading" constant="16" id="YK3-dj-Ybk"/>
+                            <constraint firstItem="j1F-qD-O3B" firstAttribute="leading" secondItem="zBb-if-kQD" secondAttribute="leading" constant="16" id="jwa-DA-SCX"/>
+                            <constraint firstItem="sgV-Fb-0Dh" firstAttribute="top" secondItem="j1F-qD-O3B" secondAttribute="bottom" constant="20" id="q4C-cC-mH1"/>
+                            <constraint firstAttribute="trailing" secondItem="j1F-qD-O3B" secondAttribute="trailing" constant="16" id="uop-Xs-U82"/>
+                            <constraint firstItem="lFD-pw-c1C" firstAttribute="top" secondItem="Xb5-UC-vQS" secondAttribute="top" constant="20" id="wfc-JJ-RsU"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" id="Llq-1i-9Q3"/>
+                    <connections>
+                        <segue destination="Xxg-Pp-vvN" kind="show" identifier="segueToShowFBInvoice" id="gup-xd-w0n"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="K7h-5E-zeA" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="-7445" y="371"/>
         </scene>
         <!--Create Raw Tx View Controller-->
         <scene sceneID="nPC-E2-jSN">
@@ -1598,7 +1659,7 @@
             </objects>
             <point key="canvasLocation" x="-1159.2" y="368.36581709145429"/>
         </scene>
-        <!--v0.0.3-->
+        <!--v0.1.0-->
         <scene sceneID="Ajv-p7-tUm">
             <objects>
                 <viewController extendedLayoutIncludesOpaqueBars="YES" id="AS8-ke-Yxh" customClass="SettingsViewController" customModule="FullyNoded_JoinMarket" customModuleProvider="target" sceneMemberID="viewController">
@@ -1792,7 +1853,7 @@
                         </constraints>
                     </view>
                     <tabBarItem key="tabBarItem" title="" image="Settings" id="n34-O3-Fyo"/>
-                    <navigationItem key="navigationItem" title="v0.0.3" id="YNb-Gd-Hqq"/>
+                    <navigationItem key="navigationItem" title="v0.1.0" id="YNb-Gd-Hqq"/>
                     <connections>
                         <outlet property="settingsTable" destination="hcp-eG-lok" id="xPg-8r-KBs"/>
                         <segue destination="bKH-sI-MiM" kind="show" identifier="goLogIn" id="qed-hl-jG5"/>
@@ -2587,6 +2648,7 @@
         <segue reference="qed-hl-jG5"/>
         <segue reference="lCn-Tj-DFs"/>
         <segue reference="rUh-M4-517"/>
+        <segue reference="gup-xd-w0n"/>
         <segue reference="07e-vk-5Ux"/>
         <segue reference="07E-4w-Zh7"/>
     </inferredMetricsTieBreakers>
