@@ -653,6 +653,7 @@ class ActiveWalletViewController: UIViewController {
             
             self.wallet = wallet
             self.walletLabel = wallet.name
+            self.updateLabel()
             self.getWalletBalance()
         }
     }
@@ -950,20 +951,9 @@ class ActiveWalletViewController: UIViewController {
                             return
                         }
                         
-                        showAlert(vc: self, title: "", message: "\(wallet!.name.capitalized) unlocked ✓")
+                        showAlert(vc: self, title: "", message: "\(wallet!.name) unlocked ✓")
                         
-                        CoreDataService.retrieveEntity(entityName: .jmWallets) { jmWallets in
-                            guard let jmWallets = jmWallets else { return }
-                            
-                            for jmWallet in jmWallets {
-                                let w = JMWallet(jmWallet)
-                                
-                                if w.active {
-                                    self.wallet = w
-                                    self.getWalletBalance()
-                                }
-                            }
-                        }
+                        loadTable()
                     }
                     
                 } else {

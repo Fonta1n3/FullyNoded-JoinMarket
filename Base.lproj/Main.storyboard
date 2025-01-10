@@ -908,6 +908,7 @@
                                             <constraint firstItem="vij-4Q-w8U" firstAttribute="top" secondItem="PBP-HA-t9R" secondAttribute="top" constant="9" id="kYa-gO-QEq"/>
                                             <constraint firstAttribute="trailing" secondItem="5Ca-4Z-dsq" secondAttribute="trailing" constant="8" id="lnd-r9-eig"/>
                                             <constraint firstAttribute="trailing" secondItem="zuZ-CM-DF7" secondAttribute="trailing" constant="8.5" id="mCT-nl-VWh"/>
+                                            <constraint firstItem="cPQ-ZY-9KO" firstAttribute="top" secondItem="5Ca-4Z-dsq" secondAttribute="bottom" constant="20" id="wux-Pl-BHj"/>
                                         </constraints>
                                     </view>
                                     <view clipsSubviews="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="0BT-sN-BLU">
@@ -1112,7 +1113,7 @@
                         <subviews>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" textAlignment="natural" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="j1F-qD-O3B">
                                 <rect key="frame" x="16" y="54" width="343" height="284.5"/>
-                                <mutableString key="text">A fidelity bond is a timelocked bitcoin address.  Creating a fidelity bond increases your earning potential as a maker. The higher the amount and duration of the bond, the higher the earning potential.  You will be prompted to select an expiry date for the bond, you will NOT be able to spend these funds until that date.   You must wait until your current fidelity bond expires before making a new one.</mutableString>
+                                <string key="text">A fidelity bond is a timelocked bitcoin address.  Creating a fidelity bond increases your earning potential as a maker. The higher the amount and duration of the bond, the higher the earning potential.  You will be prompted to select an expiry date for the bond, you will NOT be able to spend these funds until that date.   You must wait until your current fidelity bond expires before making a new one.</string>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                 <color key="textColor" systemColor="secondaryLabelColor"/>
                                 <nil key="highlightedColor"/>
@@ -1659,7 +1660,7 @@
             </objects>
             <point key="canvasLocation" x="-1159.2" y="368.36581709145429"/>
         </scene>
-        <!--v0.1.0-->
+        <!--v0.1.1-->
         <scene sceneID="Ajv-p7-tUm">
             <objects>
                 <viewController extendedLayoutIncludesOpaqueBars="YES" id="AS8-ke-Yxh" customClass="SettingsViewController" customModule="FullyNoded_JoinMarket" customModuleProvider="target" sceneMemberID="viewController">
@@ -1853,7 +1854,7 @@
                         </constraints>
                     </view>
                     <tabBarItem key="tabBarItem" title="" image="Settings" id="n34-O3-Fyo"/>
-                    <navigationItem key="navigationItem" title="v0.1.0" id="YNb-Gd-Hqq"/>
+                    <navigationItem key="navigationItem" title="v0.1.1" id="YNb-Gd-Hqq"/>
                     <connections>
                         <outlet property="settingsTable" destination="hcp-eG-lok" id="xPg-8r-KBs"/>
                         <segue destination="bKH-sI-MiM" kind="show" identifier="goLogIn" id="qed-hl-jG5"/>
@@ -2648,7 +2649,7 @@
         <segue reference="qed-hl-jG5"/>
         <segue reference="lCn-Tj-DFs"/>
         <segue reference="rUh-M4-517"/>
-        <segue reference="gup-xd-w0n"/>
+        <segue reference="kq8-dj-bJ2"/>
         <segue reference="07e-vk-5Ux"/>
         <segue reference="07E-4w-Zh7"/>
     </inferredMetricsTieBreakers>

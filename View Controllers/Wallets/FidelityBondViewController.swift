@@ -47,7 +47,6 @@ class FidelityBondViewController: UIViewController {
         for i in 1...4 {
             years.append("\(currentYearInt + i)")
         }        
-        //createFidelityBondAction()
     }
     
     @IBAction func createNow(_ sender: Any) {
@@ -69,7 +68,6 @@ class FidelityBondViewController: UIViewController {
                 guard let self = self else { return }
                             
                 guard let exists = exists, exists else {
-                    //self.promptToSelectTimelockDate()
                     selectTimelockDate()
                     return
                 }
