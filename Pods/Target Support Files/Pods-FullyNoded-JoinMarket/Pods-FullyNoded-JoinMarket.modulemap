@@ -1,0 +1,6 @@
+framework module Pods_FullyNoded_JoinMarket {
+  umbrella header "Pods-FullyNoded-JoinMarket-umbrella.h"
+
+  export *
+  module * { export * }
+}

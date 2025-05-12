@@ -1,0 +1,20 @@
+PODS:
+  - Tor (408.13.1):
+    - Tor/CTor (= 408.13.1)
+  - Tor/Core (408.13.1)
+  - Tor/CTor (408.13.1):
+    - Tor/Core
+
+DEPENDENCIES:
+  - Tor
+
+SPEC REPOS:
+  trunk:
+    - Tor
+
+SPEC CHECKSUMS:
+  Tor: d66126252c683db01fb971a1cf10303118a387c3
+
+PODFILE CHECKSUM: 08c5843b95f130b4365f9e1b4a372f936ca694ca
+
+COCOAPODS: 1.15.2
