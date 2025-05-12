@@ -99,7 +99,7 @@
 #############################################################################
 
 # NOTE: Translation support is disabled with CMake older than 3.20.
-cmake_minimum_required(VERSION 3.14...3.30 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14...3.31 FATAL_ERROR)
 
 include(CMakePushCheckState)
 include(CheckIncludeFile)
@@ -174,6 +174,12 @@ endif()
 
 # On Apple OSes, don't build executables as bundles:
 set(CMAKE_MACOSX_BUNDLE OFF)
+
+# The targets defined here don't support compiling as a unity build. Encoder
+# and decoder source files define different types with the same name, and some
+# internal header files don't have header guards leading to redeclaration
+# errors.
+set(CMAKE_UNITY_BUILD OFF)
 
 # Set CMAKE_INSTALL_LIBDIR and friends. This needs to be done before
 # the LOCALEDIR_DEFINITION workaround below.
@@ -351,6 +357,35 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.20")
                             "available in distribution tarballs. "
                             "To avoid this warning, NLS can be explicitly "
                             "disabled by passing -DENABLE_NLS=OFF to cmake.")
+        endif()
+
+        if(ENABLE_NLS AND WIN32)
+            # The command line tools use UTF-8 on native Windows.
+            # Non-ASCII characters display correctly only when
+            # using UCRT and gettext-runtime >= 0.23.1.
+            check_c_source_compiles(
+                    "#define WIN32_LEAN_AND_MEAN
+                    #include <windows.h>
+                    #include <libintl.h>
+
+                    #ifndef _UCRT
+                    #error \"Not UCRT\"
+                    #endif
+
+                    #if LIBINTL_VERSION < 0x001701
+                    #error \"gettext-runtime < 0.23.1\"
+                    #endif
+
+                    int main(void) { return 0; }
+                "
+                USING_UCRT_AND_RECENT_GETTEXT)
+            if(NOT USING_UCRT_AND_RECENT_GETTEXT)
+                message(FATAL_ERROR "Native language support (NLS) was enabled "
+                                    "but it requires UCRT and "
+                                    "gettext-runtime >= 0.23.1. To build with "
+                                    "MSVCRT or old gettext-runtime, "
+                                    "set ENABLE_NLS=OFF.")
+            endif()
         endif()
 
         # Warn if NLS is enabled but translated man pages are missing.

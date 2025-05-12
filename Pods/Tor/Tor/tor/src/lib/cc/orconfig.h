@@ -7,12 +7,12 @@
 /* All assert failures are fatal */
 /* #undef ALL_BUGS_ARE_FATAL */
 
-/* # for 0.4.8.13 Approximate date when this software was released. (Updated
+/* # for 0.4.8.14 Approximate date when this software was released. (Updated
    when the version changes.) */
-#define APPROX_RELEASE_DATE "2024-10-24"
+#define APPROX_RELEASE_DATE "2025-02-05"
 
 /* tor's build directory */
-#define BUILDDIR "/Users/fontaine/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/tor"
+#define BUILDDIR "/Users/peterdenton/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/tor"
 
 /* Compiler name */
 #define COMPILER /**/
@@ -21,13 +21,13 @@
 #define COMPILER_VENDOR "clang"
 
 /* Compiler version */
-#define COMPILER_VERSION "15.0.0"
+#define COMPILER_VERSION "16.0.0"
 
 /* tor's configuration directory */
-#define CONFDIR "/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/IntermediateBuildFilesPath/Pods.build/Release-iphoneos/tor-arm64/etc/tor"
+#define CONFDIR "/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/tor-arm64/etc/tor"
 
 /* Flags passed to configure */
-#define CONFIG_FLAGS "--enable-silent-rules --enable-pic --disable-module-relay --disable-module-dirauth --disable-tool-name-check --disable-unittests --enable-static-openssl --enable-static-libevent --disable-asciidoc --disable-system-torrc --disable-linker-hardening --disable-dependency-tracking --disable-manpage --disable-html-manual --disable-gcc-warnings-advisory --prefix=/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/IntermediateBuildFilesPath/Pods.build/Release-iphoneos/tor-arm64 --with-libevent-dir=/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/BuildProductsPath/Release-iphoneos/Tor --with-openssl-dir=/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/BuildProductsPath/Release-iphoneos/Tor --enable-lzma=yes --enable-zstd=no CC=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.5.sdk CPP=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -E -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.5.sdk CPPFLAGS= -fembed-bitcode -I/Users/fontaine/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/tor/src/core -I/Users/fontaine/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/include -I/Users/fontaine/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/openssl/include -I/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/BuildProductsPath/Release-iphoneos/Tor/openssl-arm64 -I/Users/fontaine/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/libevent/include -I/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/BuildProductsPath/Release-iphoneos/Tor/libevent-arm64 -I/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/BuildProductsPath/Release-iphoneos/Tor/liblzma-arm64 -I/Users/fontaine/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-fthqltkotyrfoyasrfftvtkabvjr/Build/Intermediates.noindex/ArchiveIntermediates/FullyNoded-JoinMarket/IntermediateBuildFilesPath/Pods.build/Release-iphoneos/tor-sys -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.5.sdk -DOPENSSL_NO_ENGINE cross_compiling=yes ac_cv_func__NSGetEnviron=no ac_cv_func_clock_gettime=no ac_cv_func_getentropy=no LDFLAGS=-lz -fembed-bitcode"
+#define CONFIG_FLAGS "--enable-silent-rules --enable-pic --disable-module-relay --disable-module-dirauth --disable-tool-name-check --disable-unittests --enable-static-openssl --enable-static-libevent --disable-asciidoc --disable-system-torrc --disable-linker-hardening --disable-dependency-tracking --disable-manpage --disable-html-manual --disable-gcc-warnings-advisory --prefix=/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/tor-arm64 --with-libevent-dir=/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Products/Debug-iphoneos/Tor --with-openssl-dir=/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Products/Debug-iphoneos/Tor --enable-lzma=yes --enable-zstd=no CC=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk CPP=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -E -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk CPPFLAGS=-g -O0  -I/Users/peterdenton/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/tor/src/core -I/Users/peterdenton/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/include -I/Users/peterdenton/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/openssl/include -I/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Products/Debug-iphoneos/Tor/openssl-arm64 -I/Users/peterdenton/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/libevent/include -I/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Products/Debug-iphoneos/Tor/libevent-arm64 -I/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Products/Debug-iphoneos/Tor/liblzma-arm64 -I/Users/peterdenton/Library/Developer/Xcode/DerivedData/FullyNoded-JoinMarket-dhlbhxvirzeowmapqhbjgegiwvqj/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/tor-sys -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk -DOPENSSL_NO_ENGINE cross_compiling=yes ac_cv_func__NSGetEnviron=no ac_cv_func_clock_gettime=no ac_cv_func_getentropy=no LDFLAGS=-lz "
 
 /* Enable smartlist debugging */
 /* #undef DEBUG_SMARTLIST */
@@ -714,7 +714,7 @@
 #define PACKAGE_NAME "tor"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "tor 0.4.8.13"
+#define PACKAGE_STRING "tor 0.4.8.14"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "tor"
@@ -723,7 +723,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.4.8.13"
+#define PACKAGE_VERSION "0.4.8.14"
 
 /* How to access the PC from a struct ucontext */
 /* #undef PC_FROM_UCONTEXT */
@@ -774,7 +774,7 @@
 #define SIZEOF___INT64 0
 
 /* tor's sourcedir directory */
-#define SRCDIR "/Users/fontaine/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/tor"
+#define SRCDIR "/Users/peterdenton/Projects/FullyNoded-JoinMarket/Pods/Tor/Tor/tor"
 
 /* Set to 1 if we can compile a simple stdatomic example. */
 #define STDATOMIC_WORKS 1
@@ -902,7 +902,7 @@
 #define USING_TWOS_COMPLEMENT 1
 
 /* Version number of package */
-#define VERSION "0.4.8.13"
+#define VERSION "0.4.8.14"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
